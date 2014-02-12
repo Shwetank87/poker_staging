@@ -36,6 +36,7 @@ public class PokerLogic {
   private static final String BOARD = null;
   private static final String HOLE_CARDS = "holeCards";
   private static final String PLAYER_BETS = "playerBets";
+  private static final String PLAYER_CHIPS = "playerChips";
   private static final String POTS = null;
   private static final String CHIPS = "chips";
   private static final String CURRENT_POT_BET = "currentPotBet";
@@ -112,7 +113,7 @@ public class PokerLogic {
       else
         playerChipsList.add(startingChips[i]);
     }
-    operations.add(new Set(PLAYER_BETS, playerChipsList));
+    operations.add(new Set(PLAYER_CHIPS, playerChipsList));
     
     // Create the main pot with small and big blind already in it
     Map<String, Object> mainPot = ImmutableMap.<String, Object>of(
