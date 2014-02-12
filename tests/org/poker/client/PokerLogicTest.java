@@ -62,6 +62,14 @@ public class PokerLogicTest {
   }
 
   @Test
+  public void testInitialOperationSize() {
+    List<Operation> initialOperation = getInitialOperations(
+        new int[]{p0_id, p1_id, p2_id},
+        new int[]{1000, 2000, 1000});
+    assertEquals(52 + 52 + 10, initialOperation.size());
+  }
+  
+  @Test
   public void testInitialMoveTwoPlayers() {
     List<Operation> initialOperations = getInitialOperations(
         new int[]{p0_id, p1_id},
