@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.poker.client.GameApi.EndGame;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
 import org.poker.client.GameApi.VerifyMove;
@@ -69,9 +70,10 @@ public class PokerLogicTest {
       ImmutableMap.<String, Object>of("K", "V");
   
   /**
-   * 4 players pre-flop
-   * Small blind 100
-   * Big 
+   * 4-way hand during PreFlop<P>
+   * Blinds 100/200<P>
+   * P3 bets 600<P>
+   * P0 (dealer) to act
    */
   private final ImmutableMap<String, Object> preFlopFourPlayerDealersTurnState = 
       ImmutableMap.<String, Object>builder().
@@ -124,10 +126,10 @@ public class PokerLogicTest {
   
   //TODO: complete end game test!!
   /**
-   *
-   * Pot before river: 3000
-   * P1 bets 400
-   * P2 calls
+   * 3-way hand during River<P>
+   * Pot before river: 3000<P>
+   * P1 bets 400<P>
+   * P2 calls<P>
    * P0 to act
    */
   private final ImmutableMap<String, Object> riverThreePlayerDealersTurnState = 
@@ -148,6 +150,39 @@ public class PokerLogicTest {
               PLAYERS_IN_POT, ImmutableList.of(P[0], P[1], P[2])))).
           build();
 
+  /**
+   * P0 folds and the hand ends.
+   * Assume P1 wins.
+   */
+  private final ImmutableList<Operation> riverThreePlayerDealerFolds =
+      ImmutableList.<Operation>of(
+          new Set(CURRENT_ROUND, BettingRound.SHOWDOWN.name()),
+          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2])),
+          new Set(PLAYER_CHIPS, ImmutableList.of(2000, 1600 + 3800, 1600)),
+          new EndGame(p1_id));
+  
+  /**
+   * P0 calls and the hand ends.
+   * Assume P1 wins.
+   */
+  private final ImmutableList<Operation> riverThreePlayerDealerCalls =
+      ImmutableList.<Operation>of(
+          new Set(CURRENT_ROUND, BettingRound.SHOWDOWN.name()),
+          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[0])),
+          new Set(PLAYER_CHIPS, ImmutableList.of(2000 - 400, 1600 + 3800, 1600)),
+          new EndGame(p1_id));
+  
+  /**
+   * P0 folds but still wins.
+   */
+  private final ImmutableList<Operation> riverThreePlayerDealerFoldsAndWins =
+      ImmutableList.<Operation>of(
+          new Set(CURRENT_ROUND, BettingRound.SHOWDOWN.name()),
+          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2])),
+          new Set(PLAYER_CHIPS, ImmutableList.of(2000, 1600 + 3800, 1600)),
+          new EndGame(p0_id));
+  
+  
   private VerifyMove move(int lastMovePlayerId, Map<String, Object> lastState,
       List<Operation> lastMove, List<Map<String, Object>> playersInfo) {
     return new VerifyMove(p0_id, playersInfo,
@@ -289,11 +324,33 @@ public class PokerLogicTest {
     assertHacker(verifyMove);
   }
   
+  @Test
+  public void testEndGameAfterLastPlayerFolds() {
+    // Last player folds and the hand ends
+    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState, 
+        riverThreePlayerDealerFolds, playersInfo_3_players);
+    assertMoveOk(verifyMove);
+  }
   
+  @Test
+  public void testEndGameAfterLastPlayerCalls() {
+    // Last player folds and the hand ends
+    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState, 
+        riverThreePlayerDealerCalls, playersInfo_3_players);
+    assertMoveOk(verifyMove);
+  }
+  
+  @Test
+  public void testEndGameWithWrongPlayerVictory() {
+    // Last player folds and the hand ends
+    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState, 
+        riverThreePlayerDealerFoldsAndWins, playersInfo_3_players);
+    assertHacker(verifyMove);
+  }
   
   /*
-   * Utility methods copied from
-   * https://github.com/yoav-zibin/cheat-game/blob/master/eclipse/tests/org/cheat/client/CheatLogicTest.java
+   * Utility methods copied from CheatLogicTest.java in
+   * https://github.com/yoav-zibin/cheat-game
    */
   
   private void assertMoveOk(VerifyMove verifyMove) {
