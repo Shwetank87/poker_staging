@@ -11,6 +11,7 @@ import org.poker.client.Card.Rank;
 import org.poker.client.Card.Suit;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
+import org.poker.client.GameApi.SetVisibility;
 import org.poker.client.GameApi.Shuffle;
 import org.poker.client.GameApi.VerifyMove;
 import org.poker.client.GameApi.VerifyMoveDone;
@@ -123,7 +124,15 @@ public class PokerLogic {
     // shuffle the cards
     operations.add(new Shuffle(getCardsInRange(0, 51)));
     
-    //TODO: set visibility operations
+    // Make hole cards visible to players holding them
+    for(int i=0; i<numberOfPlayers; i++) {
+      operations.add(new SetVisibility(C+(i*2), ImmutableList.of(playerIds[i])));
+      operations.add(new SetVisibility(C+(i*2 + 1), ImmutableList.of(playerIds[i])));
+    }
+    // Make remaining cards not visible to anyone
+    for(int i=numberOfPlayers; i<52; i++) {
+      operations.add(new SetVisibility(C + i, ImmutableList.<Integer>of()));
+    }
     
     return operations;
 
