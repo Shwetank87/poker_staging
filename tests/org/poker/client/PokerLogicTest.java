@@ -16,6 +16,7 @@ import org.poker.client.GameApi.VerifyMoveDone;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 @RunWith(JUnit4.class)
 public class PokerLogicTest {
@@ -32,13 +33,11 @@ public class PokerLogicTest {
   private static final String CURRENT_BETTER = "currentBetter";
   private static final String CURRENT_ROUND = "currentRound";
   private static final String PLAYERS_IN_HAND = "playersInHand";
-  private static final String BOARD = null;
+  private static final String BOARD = "board";
   private static final String HOLE_CARDS = "holeCards";
   private static final String PLAYER_BETS = "playerBets";
-  private static final String PLAYER_BET = "playerBet";
   private static final String PLAYER_CHIPS = "playerChips";
-  private static final String POTS = null;
-  private static final String POT = null;
+  private static final String POTS = "pots";
   private static final String CHIPS = "chips";
   private static final String CURRENT_POT_BET = "currentPotBet";
   private static final String PLAYERS_IN_POT = "playersInPot";
@@ -69,7 +68,12 @@ public class PokerLogicTest {
   private final ImmutableMap<String, Object> nonEmptyState =
       ImmutableMap.<String, Object>of("K", "V");
   
-  private final ImmutableMap<String, Object> preFlopFourPlayerDealerTurnState = 
+  /**
+   * 4 players pre-flop
+   * Small blind 100
+   * Big 
+   */
+  private final ImmutableMap<String, Object> preFlopFourPlayerDealersTurnState = 
       ImmutableMap.<String, Object>builder().
           put(NUMBER_OF_PLAYERS, 4).
           put(WHOSE_MOVE, P[0]).
@@ -91,49 +95,59 @@ public class PokerLogicTest {
   private final ImmutableList<Operation> preFlopFourPlayerDealerFold =
       ImmutableList.<Operation>of(new Set(WHOSE_MOVE, P[1]));
 
-  private final ImmutableList<Operation> preFlopFourPlayerDealerCall =
-      ImmutableList.<Operation>of(
-          new Set(WHOSE_MOVE, P[1]),
-          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])),
-          new Set(PLAYER_BET+0, 600),
-          new Set(PLAYER_CHIPS+0, 1400),
-          new Set(POT+0, ImmutableMap.<String, Object>of(
-              CHIPS, 1500,
-              CURRENT_POT_BET, 600,
-              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0])))
-          );
+  private ImmutableList<Operation> getPreFlopFourPlayerDealerRaise(int raiseByAmount) {
+    List<ImmutableMap<String, Object>> pots = Lists.newArrayList();
+    // Main pot
+    pots.add(ImmutableMap.<String, Object>of(
+        CHIPS, 900 + 600 + raiseByAmount,
+        CURRENT_POT_BET, 600 + raiseByAmount,
+        PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0])));
+    // If bet amount is more than chips, its an all-in move and new "side pot" is created.
+    // Ideally bet cannot be more than chips, but we allow it for negative tests.
+    if(600 + raiseByAmount >= 2000) {
+      pots.add(ImmutableMap.<String, Object>of(
+          CHIPS, 0,
+          CURRENT_POT_BET, 0,
+          PLAYERS_IN_POT, ImmutableList.of()));
+    }
+    
+    ImmutableList.Builder<Operation> listBuilder = ImmutableList.<Operation>builder();
+    listBuilder.add(new Set(WHOSE_MOVE, P[1]));
+    // current better will change if move is not a call.
+    if(raiseByAmount > 0) listBuilder.add(new Set(CURRENT_BETTER, P[0]));
+    listBuilder.add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0]))).
+    add(new Set(PLAYER_BETS, ImmutableList.of(600 + raiseByAmount, 100, 200, 600))).
+    add(new Set(PLAYER_CHIPS, ImmutableList.of(2000 - 600 - raiseByAmount, 1900, 1800, 1400))).
+    add(new Set(POTS, pots));
+    return listBuilder.build();
+  }
   
-  private final ImmutableList<Operation> preFlopFourPlayerDealerRaise =
-      ImmutableList.<Operation>of(
-          new Set(WHOSE_MOVE, P[1]),
-          new Set(CURRENT_BETTER, P[0]),
-          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])),
-          new Set(PLAYER_BET+0, 1200),
-          new Set(PLAYER_CHIPS+0, 800),
-          new Set(POT+0, ImmutableMap.<String, Object>of(
-              CHIPS, 2100,
-              CURRENT_POT_BET, 1200,
-              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0])))
-          );
+  //TODO: complete end game test!!
+  /**
+   *
+   * Pot before river: 3000
+   * P1 bets 400
+   * P2 calls
+   * P0 to act
+   */
+  private final ImmutableMap<String, Object> riverThreePlayerDealersTurnState = 
+      ImmutableMap.<String, Object>builder().
+          put(NUMBER_OF_PLAYERS, 3).
+          put(WHOSE_MOVE, P[0]).
+          put(CURRENT_BETTER, P[1]).
+          put(CURRENT_ROUND, BettingRound.RIVER.name()).
+          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[0])).
+          put(HOLE_CARDS, ImmutableList.of(
+              ImmutableList.of(0, 1), ImmutableList.of(2, 3), ImmutableList.of(4, 5))).
+          put(BOARD, ImmutableList.of(6, 7, 8, 9, 10)).
+          put(PLAYER_BETS, ImmutableList.of(0, 400, 400)).
+          put(PLAYER_CHIPS, ImmutableList.of(2000, 1600, 1600)).
+          put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
+              CHIPS, 3800,
+              CURRENT_POT_BET, 400,
+              PLAYERS_IN_POT, ImmutableList.of(P[0], P[1], P[2])))).
+          build();
 
-  private final ImmutableList<Operation> preFlopFourPlayerDealerAllIn =
-      ImmutableList.<Operation>of(
-          new Set(WHOSE_MOVE, P[1]),
-          new Set(CURRENT_BETTER, P[0]),
-          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])),
-          new Set(PLAYER_BET+0, 200),
-          new Set(PLAYER_CHIPS+0, 0),
-          new Set(POTS, ImmutableList.of(
-              ImmutableMap.<String, Object>of(
-                  CHIPS, 2900,
-                  CURRENT_POT_BET, 2000,
-                  PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0])),
-              ImmutableMap.<String, Object>of(
-                  CHIPS, 0,
-                  CURRENT_POT_BET, 0,
-                  PLAYERS_IN_POT, ImmutableList.of())))
-          );
-  
   private VerifyMove move(int lastMovePlayerId, Map<String, Object> lastState,
       List<Operation> lastMove, List<Map<String, Object>> playersInfo) {
     return new VerifyMove(p0_id, playersInfo,
@@ -151,7 +165,11 @@ public class PokerLogicTest {
     List<Operation> initialOperation = getInitialOperations(
         new int[]{p0_id, p1_id, p2_id},
         new int[]{1000, 2000, 1000});
-    assertEquals(52 + 52 + 10, initialOperation.size());
+    // 10 Set operations
+    // 1 Shuffle operation
+    // 52 Set operations for cards
+    // 52 SetVisibility operations for cards
+    assertEquals(10 + 1 + 52 + 52, initialOperation.size());
   }
   
   @Test
@@ -202,64 +220,76 @@ public class PokerLogicTest {
   }
   
   @Test
-  public void testPreFlopFourPlayerFold() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
+  public void testPreFlopFold() {
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
         preFlopFourPlayerDealerFold, playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   
   @Test
-  public void testPreFlopFourPlayerCall() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
-        preFlopFourPlayerDealerCall, playersInfo_4_players);
+  public void testPreFlopCall() {
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+        getPreFlopFourPlayerDealerRaise(0), playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
-  public void testPreFlopFourPlayerRaise() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
-        preFlopFourPlayerDealerRaise, playersInfo_4_players);
+  public void testPreFlopRaise() {
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+        getPreFlopFourPlayerDealerRaise(600), playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
-  public void testPreFlopFourPlayerAllIn() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
-        preFlopFourPlayerDealerAllIn, playersInfo_4_players);
+  public void testPreFlopAllIn() {
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+        getPreFlopFourPlayerDealerRaise(1400), playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
-  public void testPreFlopWrongPlayerMoves() {
+  public void testPreFlopMoveByWrongPlayer() {
+    VerifyMove verifyMove = null;
+    
     //wrong player fold
-    VerifyMove verifyMove = move(p1_id, preFlopFourPlayerDealerTurnState,
+    verifyMove = move(p1_id, preFlopFourPlayerDealersTurnState,
         preFlopFourPlayerDealerFold, playersInfo_4_players);
     assertHacker(verifyMove);
     
     //wrong player call
-    verifyMove = move(p2_id, preFlopFourPlayerDealerTurnState,
-        preFlopFourPlayerDealerCall, playersInfo_4_players);
+    verifyMove = move(p2_id, preFlopFourPlayerDealersTurnState,
+        getPreFlopFourPlayerDealerRaise(0), playersInfo_4_players);
     assertHacker(verifyMove);
     
     //wrong player raise
-    verifyMove = move(p3_id, preFlopFourPlayerDealerTurnState,
-        preFlopFourPlayerDealerRaise, playersInfo_4_players);
+    verifyMove = move(p3_id, preFlopFourPlayerDealersTurnState,
+        getPreFlopFourPlayerDealerRaise(600), playersInfo_4_players);
     assertHacker(verifyMove);
     
     //wrong player all in
-    verifyMove = move(p1_id, preFlopFourPlayerDealerTurnState,
-        preFlopFourPlayerDealerAllIn, playersInfo_4_players);
+    verifyMove = move(p1_id, preFlopFourPlayerDealersTurnState,
+        getPreFlopFourPlayerDealerRaise(1400), playersInfo_4_players);
     assertHacker(verifyMove);
   }
   
   @Test
-  public void testPreFlopWrongAmountMoves() {
-    //raise by insufficient (if you have to raise at least double the bet)
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
-        preFlopFourPlayerDealerRaise, playersInfo_4_players);
-    assertMoveOk(verifyMove);
+  public void testPreFlopRaiseByWrongAmount() {
+    // Raise done by insufficient amount (you have to raise to least double the existing bet)
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+        getPreFlopFourPlayerDealerRaise(400), playersInfo_4_players);
+    assertHacker(verifyMove);
   }
+  
+  @Test
+  public void testPreFlopRaiseByExcessAmount() {
+    // Raise to more chips than player has
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+        getPreFlopFourPlayerDealerRaise(2000), playersInfo_4_players);
+    assertHacker(verifyMove);
+  }
+  
+  
   
   /*
    * Utility methods copied from
@@ -275,6 +305,5 @@ public class PokerLogicTest {
     VerifyMoveDone verifyDone = pokerLogic.verify(verifyMove);
     assertEquals(verifyMove.getLastMovePlayerId(), verifyDone.getHackerPlayerId());
   }
-
-
+  
 }

@@ -33,11 +33,11 @@ public class PokerLogic {
   private static final String CURRENT_BETTER = "currentBetter";
   private static final String CURRENT_ROUND = "currentRound";
   private static final String PLAYERS_IN_HAND = "playersInHand";
-  private static final String BOARD = null;
+  private static final String BOARD = "board";
   private static final String HOLE_CARDS = "holeCards";
   private static final String PLAYER_BETS = "playerBets";
   private static final String PLAYER_CHIPS = "playerChips";
-  private static final String POTS = null;
+  private static final String POTS = "pots";
   private static final String CHIPS = "chips";
   private static final String CURRENT_POT_BET = "currentPotBet";
   private static final String PLAYERS_IN_POT = "playersInPot";
@@ -131,7 +131,7 @@ public class PokerLogic {
       operations.add(new SetVisibility(C+(i*2 + 1), ImmutableList.of(playerIds[i])));
     }
     // Make remaining cards not visible to anyone
-    for(int i=numberOfPlayers; i<52; i++) {
+    for(int i=2*numberOfPlayers; i<52; i++) {
       operations.add(new SetVisibility(C + i, ImmutableList.<Integer>of()));
     }
     
