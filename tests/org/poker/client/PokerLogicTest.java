@@ -69,7 +69,7 @@ public class PokerLogicTest {
   private final ImmutableMap<String, Object> nonEmptyState =
       ImmutableMap.<String, Object>of("K", "V");
   
-  private final ImmutableMap<String, Object> preFlopFourPlayerDealerTurn = 
+  private final ImmutableMap<String, Object> preFlopFourPlayerDealerTurnState = 
       ImmutableMap.<String, Object>builder().
           put(NUMBER_OF_PLAYERS, 4).
           put(WHOSE_MOVE, P[0]).
@@ -203,32 +203,63 @@ public class PokerLogicTest {
   
   @Test
   public void testPreFlopFourPlayerFold() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurn, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
         preFlopFourPlayerDealerFold, playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
+  
   @Test
   public void testPreFlopFourPlayerCall() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurn, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
         preFlopFourPlayerDealerCall, playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
   public void testPreFlopFourPlayerRaise() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurn, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
         preFlopFourPlayerDealerRaise, playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
   public void testPreFlopFourPlayerAllIn() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurn, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
         preFlopFourPlayerDealerAllIn, playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
+  @Test
+  public void testPreFlopWrongPlayerMoves() {
+    //wrong player fold
+    VerifyMove verifyMove = move(p1_id, preFlopFourPlayerDealerTurnState,
+        preFlopFourPlayerDealerFold, playersInfo_4_players);
+    assertHacker(verifyMove);
+    
+    //wrong player call
+    verifyMove = move(p2_id, preFlopFourPlayerDealerTurnState,
+        preFlopFourPlayerDealerCall, playersInfo_4_players);
+    assertHacker(verifyMove);
+    
+    //wrong player raise
+    verifyMove = move(p3_id, preFlopFourPlayerDealerTurnState,
+        preFlopFourPlayerDealerRaise, playersInfo_4_players);
+    assertHacker(verifyMove);
+    
+    //wrong player all in
+    verifyMove = move(p1_id, preFlopFourPlayerDealerTurnState,
+        preFlopFourPlayerDealerAllIn, playersInfo_4_players);
+    assertHacker(verifyMove);
+  }
+  
+  @Test
+  public void testPreFlopWrongAmountMoves() {
+    //raise by insufficient (if you have to raise at least double the bet)
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealerTurnState, 
+        preFlopFourPlayerDealerRaise, playersInfo_4_players);
+    assertMoveOk(verifyMove);
+  }
   
   /*
    * Utility methods copied from
