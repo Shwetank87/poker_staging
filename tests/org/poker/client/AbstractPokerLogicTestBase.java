@@ -6,18 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.poker.client.GameApi.Operation;
-import org.poker.client.GameApi.Set;
-import org.poker.client.GameApi.SetVisibility;
 import org.poker.client.GameApi.VerifyMove;
 import org.poker.client.GameApi.VerifyMoveDone;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 
 public abstract class AbstractPokerLogicTestBase {
   
- PokerLogic pokerLogic = new PokerLogic();
+  protected PokerLogic pokerLogic = new PokerLogic();
   
   protected static final String PLAYER_ID = "playerId";
   
@@ -38,7 +35,6 @@ public abstract class AbstractPokerLogicTestBase {
   protected static final String CURRENT_POT_BET = "currentPotBet";
   protected static final String PLAYERS_IN_POT = "playersInPot";
  
-  
   protected final int p0_id = 84;
   protected final int p1_id = 85;
   protected final int p2_id = 86;
@@ -60,76 +56,28 @@ public abstract class AbstractPokerLogicTestBase {
   protected final ImmutableList<Map<String, Object>> playersInfo_4_players =
       ImmutableList.<Map<String, Object>>of(p0_info, p1_info, p2_info, p3_info);
 
-/**
- * States for different scenarios in tests
- */
-  protected final ImmutableMap<String, Object> emptyState = ImmutableMap.<String, Object>of();
+  
+  // States for different scenarios in tests
+
+  protected final ImmutableMap<String, Object> emptyState =
+      ImmutableMap.<String, Object>of();
   protected final ImmutableMap<String, Object> nonEmptyState =
       ImmutableMap.<String, Object>of("K", "V");
 
-  /**
-   * 4-way hand during PreFlop<P>
-   * Blinds 100/200<P>
-   * P3 (dealer) to act
-   */
-  protected final ImmutableMap<String, Object> preFlopFourPlayerFirstMoveState = 
-      ImmutableMap.<String, Object>builder().
-          put(NUMBER_OF_PLAYERS, 4).
-          put(WHOSE_MOVE, P[3]).
-          put(CURRENT_BETTER, P[2]).
-          put(CURRENT_ROUND, BettingRound.PRE_FLOP.name()).
-          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3])).
-          put(HOLE_CARDS, ImmutableList.of(
-              ImmutableList.of(0, 1), ImmutableList.of(2, 3),
-              ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
-          put(BOARD, ImmutableList.of(8, 9, 10, 11, 12)).
-          put(PLAYER_BETS, ImmutableList.of(0, 100, 200, 0)).
-          put(PLAYER_CHIPS, ImmutableList.of(2000, 1900, 1800, 2000)).
-          put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
-              CHIPS, 300,
-              CURRENT_POT_BET, 200,
-              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3])))).
-          build();
+
+  // Utility methods
   
-  private final ImmutableList<Operation> preflopFourPlayerP3Call() {
-    List<ImmutableMap<String, Object>> pots = Lists.newArrayList();
-  // Main pot set bet to 0 because round changes to Turn
-  pots.add(ImmutableMap.<String, Object>of(
-      CHIPS, 100 +200 +200 ,
-      CURRENT_POT_BET, 200,
-      PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3])));
-  ImmutableList.Builder<Operation> listBuilder = ImmutableList.<Operation>builder();
-  listBuilder.add(new Set(WHOSE_MOVE, P[0]));
-  // current better will change if move is not a call.
-  listBuilder.add(new Set(CURRENT_BETTER, P[2]));
-  listBuilder.add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3]))).
-  add(new Set(PLAYER_BETS, ImmutableList.of(0, 0,0, 0))).
-  add(new Set(PLAYER_CHIPS, ImmutableList.of(1500 - 500, 2000, 3000, 5000))).
-  add(new Set(POTS, pots)).
-  add(new SetVisibility(C+(4*2+3)));
-  return listBuilder.build();
-  }
-  
-  /**
-   * Utility methods
-   */
   protected VerifyMove move(int lastMovePlayerId, Map<String, Object> lastState,
       List<Operation> lastMove, List<Map<String, Object>> playersInfo) {
     return new VerifyMove(p0_id, playersInfo,
-        // we never need to check the resulting state
-        emptyState,
+        emptyState, // we never need to check the resulting state
         lastState, lastMove, lastMovePlayerId);
   }
 
-  protected List<Operation> getInitialOperations(int[] playerIds, int[] startingChips) {
-    return pokerLogic.getInitialMove(playerIds, startingChips);
-  }
-
   
-  /**
-   * Utility methods copied from CheatLogicTest.java in
-   * https://github.com/yoav-zibin/cheat-game
-   */
+  // Utility methods copied from CheatLogicTest.java in
+  // https://github.com/yoav-zibin/cheat-game
+
   protected void assertMoveOk(VerifyMove verifyMove) {
     VerifyMoveDone verifyDone = pokerLogic.verify(verifyMove);
     assertEquals(0, verifyDone.getHackerPlayerId());
@@ -139,5 +87,4 @@ public abstract class AbstractPokerLogicTestBase {
     VerifyMoveDone verifyDone = pokerLogic.verify(verifyMove);
     assertEquals(verifyMove.getLastMovePlayerId(), verifyDone.getHackerPlayerId());
   }
-
 }
