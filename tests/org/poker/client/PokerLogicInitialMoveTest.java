@@ -88,7 +88,7 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
         new int[]{p0_id, p1_id, p2_id, p3_id},
         new int[]{2000, 2000, 2000, 2000});
     //remove the shuffle operation
-    for(Iterator<Operation> it = initialOperations.iterator(); it.hasNext();)
+    for (Iterator<Operation> it = initialOperations.iterator(); it.hasNext();)
       if (it.next() instanceof GameApi.Shuffle)
         it.remove();
     
@@ -104,19 +104,19 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
         new int[]{2000, 2000, 2000, 2000});
     
     //remove the setVisibility operations
-    for(Iterator<Operation> it = initialOperations.iterator(); it.hasNext();)
+    for (Iterator<Operation> it = initialOperations.iterator(); it.hasNext();)
       if (it.next() instanceof SetVisibility)
         it.remove();
     
-    initialOperations.add(new SetVisibility(C+0, ImmutableList.of(p0_id)));
-    initialOperations.add(new SetVisibility(C+1, ImmutableList.of(p0_id)));
+    initialOperations.add(new SetVisibility(C + 0, ImmutableList.of(p0_id)));
+    initialOperations.add(new SetVisibility(C + 1, ImmutableList.of(p0_id)));
     //set visibility of other opponent cards to ALL
-    for(int i=1; i< numOfPlayers; i++) {
-      initialOperations.add(new SetVisibility(C+(i*2)));
-      initialOperations.add(new SetVisibility(C+(i*2 + 1)));
+    for (int i = 1; i < numOfPlayers; i++) {
+      initialOperations.add(new SetVisibility(C + (i * 2)));
+      initialOperations.add(new SetVisibility(C + (i * 2 + 1)));
     }
     // Make remaining cards not visible to anyone
-    for(int i=2*numOfPlayers; i<52; i++) {
+    for (int i = 2 * numOfPlayers; i < 52; i++) {
       initialOperations.add(new SetVisibility(C + i, ImmutableList.<Integer>of()));
     }
     

@@ -81,23 +81,23 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
    * P0 to act
    */
   private final ImmutableMap<String, Object> flopFourPlayerDealerTurnState =
-      ImmutableMap.<String,Object>builder().
-      put(NUMBER_OF_PLAYERS,4).
-      put(WHOSE_MOVE,P[0]).
-      put(CURRENT_BETTER,P[1]).
+      ImmutableMap.<String, Object>builder().
+      put(NUMBER_OF_PLAYERS, 4).
+      put(WHOSE_MOVE, P[0]).
+      put(CURRENT_BETTER, P[1]).
       put(CURRENT_ROUND, BettingRound.FLOP.name()).
-      put(PLAYERS_IN_HAND, ImmutableList.of(P[1],P[2],P[3],P[0])).
+      put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])).
       put(HOLE_CARDS, ImmutableList.of(
-          ImmutableList.of(0,1), ImmutableList.of(2,3),
-          ImmutableList.of(4,5), ImmutableList.of(6,7))).
-      put(BOARD,ImmutableList.of(8,9,10,11,12)).
+          ImmutableList.of(0, 1), ImmutableList.of(2, 3),
+          ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
+      put(BOARD, ImmutableList.of(8, 9, 10, 11, 12)).
       put(PLAYER_BETS, ImmutableList.of(0, 500, 500, 500)).
       put(PLAYER_CHIPS, ImmutableList.of(1500 , 2000, 3000 , 5000)).
-      put(POTS,ImmutableList.of(
+      put(POTS, ImmutableList.of(
           ImmutableMap.<String, Object>of(
-              CHIPS,3500,
+              CHIPS, 3500,
               CURRENT_POT_BET, 500,
-              PLAYERS_IN_POT, ImmutableList.of(P[0],P[1],P[2],P[3])))).
+              PLAYERS_IN_POT, ImmutableList.of(P[0], P[1], P[2], P[3])))).
       build();
   
   private final ImmutableList<Operation> flopFourPlayerDealerCalls =
@@ -113,7 +113,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
                   CHIPS, 2000 + 500 + 500 + 500,
                   CURRENT_POT_BET, 0,
                   PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0]))))).
-          add(new SetVisibility(C+(4*2+3))).
+          add(new SetVisibility(C + (4 * 2 + 3))).
           build();
   
 
@@ -122,7 +122,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   @Test
   public void testEndGameAfterLastPlayerFolds() {
     // Last player folds and the hand ends
-    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
         riverThreePlayerDealerFolds, playersInfo_3_players);
     assertMoveOk(verifyMove);
   }
@@ -130,7 +130,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   @Test
   public void testEndGameAfterLastPlayerCalls() {
     // Last player calls and the hand ends
-    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
         riverThreePlayerDealerCalls, playersInfo_3_players);
     assertMoveOk(verifyMove);
   }
@@ -138,7 +138,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   @Test
   public void testEndGameWithWrongPlayerVictory() {
     // Last player folds and the hand ends
-    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
         riverThreePlayerDealerFoldsAndWins, playersInfo_3_players);
     assertHacker(verifyMove);
   }
@@ -154,13 +154,12 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   public void testFlopToTurnTransitionWithWrongCardOpen() {
     // Player opens more board cards than necessary
     ImmutableList<Operation> flopFourPlayerWrongCardsOpened =
-        ImmutableList.<Operation>builder(). 
+        ImmutableList.<Operation>builder().
             addAll(flopFourPlayerDealerCalls).
-            add(new SetVisibility(C+(4*2+4))). // Set River card as open prematurely
+            add(new SetVisibility(C + (4 * 2 + 4))). // Set River card as open prematurely
             build();
     VerifyMove verifyMove = move(p0_id, flopFourPlayerDealerTurnState,
         flopFourPlayerWrongCardsOpened, playersInfo_4_players);
     assertHacker(verifyMove);
-  }
-    
+  } 
 }

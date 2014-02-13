@@ -51,7 +51,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
         PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0])));
     // If bet amount is more than chips, its an all-in move and new "side pot" is created.
     // Ideally bet cannot be more than chips, but we allow it for negative tests.
-    if(600 + raiseByAmount >= 2000) {
+    if (600 + raiseByAmount >= 2000) {
       pots.add(ImmutableMap.<String, Object>of(
           CHIPS, 0,
           CURRENT_POT_BET, 0,
@@ -59,11 +59,12 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     }
     ImmutableList.Builder<Operation> listBuilder = ImmutableList.<Operation>builder();
     listBuilder.add(new Set(WHOSE_MOVE, P[1]));
-    if(raiseByAmount > 0) // current better will change if move is not a call.
+    if (raiseByAmount > 0) // current better will change if move is not a call.
       listBuilder.add(new Set(CURRENT_BETTER, P[0]));
     listBuilder.add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])));
     listBuilder.add(new Set(PLAYER_BETS, ImmutableList.of(600 + raiseByAmount, 100, 200, 600)));
-    listBuilder.add(new Set(PLAYER_CHIPS, ImmutableList.of(2000 - 600 - raiseByAmount, 1900, 1800, 1400)));
+    listBuilder.add(new Set(PLAYER_CHIPS,
+        ImmutableList.of(2000 - 600 - raiseByAmount, 1900, 1800, 1400)));
     listBuilder.add(new Set(POTS, pots));
     return listBuilder.build();
   }
@@ -74,7 +75,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
    * Blinds 100/200<Br>
    * P3 to act
    */
-  protected final ImmutableMap<String, Object> preFlopFourPlayerFirstMoveState = 
+  private final ImmutableMap<String, Object> preFlopFourPlayerFirstMoveState = 
       ImmutableMap.<String, Object>builder().
           put(NUMBER_OF_PLAYERS, 4).
           put(WHOSE_MOVE, P[3]).
@@ -98,28 +99,28 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testPreFlopFold() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         preFlopFourPlayerDealerFold, playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
   public void testPreFlopCall() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         getPreFlopFourPlayerDealerRaise(0), playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
   public void testPreFlopRaise() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         getPreFlopFourPlayerDealerRaise(600), playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
   
   @Test
   public void testPreFlopAllIn() {
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         getPreFlopFourPlayerDealerRaise(1400), playersInfo_4_players);
     assertMoveOk(verifyMove);
   }
@@ -151,8 +152,9 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testPreFlopRaiseByWrongAmount() {
-    // Raise done by insufficient amount (you have to raise to least double the existing bet)
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    // Raise done by insufficient amount
+    // (you have to raise to least double the existing bet)
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         getPreFlopFourPlayerDealerRaise(400), playersInfo_4_players);
     assertHacker(verifyMove);
   }
@@ -160,7 +162,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
   @Test
   public void testPreFlopRaiseByExcessAmount() {
     // Raise to more chips than player has
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         getPreFlopFourPlayerDealerRaise(2000), playersInfo_4_players);
     assertHacker(verifyMove);
   }
@@ -171,7 +173,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     ImmutableList<Operation> illegalIncrease = ImmutableList.<Operation>of(
         new Set(WHOSE_MOVE, P[1]),
         new Set(PLAYER_CHIPS, ImmutableList.of(10000, 1900, 1800, 1400)));
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         illegalIncrease, playersInfo_4_players);
     assertHacker(verifyMove);
   }
@@ -181,12 +183,12 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     // P0 folds, but marks all community cards as visible to all
     ImmutableList<Operation> attemptToviewBoard = ImmutableList.<Operation>of(
         new Set(WHOSE_MOVE, P[1]),
-        new SetVisibility(C+8, ImmutableList.of(p0_id)),
-        new SetVisibility(C+9, ImmutableList.of(p0_id)),
-        new SetVisibility(C+10, ImmutableList.of(p0_id)),
-        new SetVisibility(C+11, ImmutableList.of(p0_id)),
-        new SetVisibility(C+12, ImmutableList.of(p0_id)));
-    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState, 
+        new SetVisibility(C + 8, ImmutableList.of(p0_id)),
+        new SetVisibility(C + 9, ImmutableList.of(p0_id)),
+        new SetVisibility(C + 10, ImmutableList.of(p0_id)),
+        new SetVisibility(C + 11, ImmutableList.of(p0_id)),
+        new SetVisibility(C + 12, ImmutableList.of(p0_id)));
+    VerifyMove verifyMove = move(p0_id, preFlopFourPlayerDealersTurnState,
         attemptToviewBoard, playersInfo_4_players);
     assertHacker(verifyMove);
   }
@@ -195,8 +197,8 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
   public void testAttemptToSkipOthersMove() {
     // P3 marks next turn as P1 instead of P0
     ImmutableList<Operation> attemptToSkipMove = ImmutableList.<Operation>of(
-        new Set(WHOSE_MOVE,P[1]));
-    VerifyMove verifyMove = move(p3_id, preFlopFourPlayerFirstMoveState, 
+        new Set(WHOSE_MOVE, P[1]));
+    VerifyMove verifyMove = move(p3_id, preFlopFourPlayerFirstMoveState,
         attemptToSkipMove, playersInfo_4_players);
     assertHacker(verifyMove);
   }
