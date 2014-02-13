@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.poker.client.GameApi.Operation;
+import org.poker.client.GameApi.Set;
+import org.poker.client.GameApi.SetVisibility;
 import org.poker.client.GameApi.VerifyMove;
 import org.poker.client.GameApi.VerifyMoveDone;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 public abstract class AbstractPokerLogicTestBase {
   
@@ -80,13 +83,32 @@ public abstract class AbstractPokerLogicTestBase {
               ImmutableList.of(0, 1), ImmutableList.of(2, 3),
               ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
           put(BOARD, ImmutableList.of(8, 9, 10, 11, 12)).
-          put(PLAYER_BETS, ImmutableList.of(0, 100, 200, 600)).
+          put(PLAYER_BETS, ImmutableList.of(0, 100, 200, 0)).
           put(PLAYER_CHIPS, ImmutableList.of(2000, 1900, 1800, 2000)).
           put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
               CHIPS, 300,
               CURRENT_POT_BET, 200,
               PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3])))).
           build();
+  
+  private final ImmutableList<Operation> preflopFourPlayerP3Call() {
+    List<ImmutableMap<String, Object>> pots = Lists.newArrayList();
+  // Main pot set bet to 0 because round changes to Turn
+  pots.add(ImmutableMap.<String, Object>of(
+      CHIPS, 100 +200 +200 ,
+      CURRENT_POT_BET, 200,
+      PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3])));
+  ImmutableList.Builder<Operation> listBuilder = ImmutableList.<Operation>builder();
+  listBuilder.add(new Set(WHOSE_MOVE, P[0]));
+  // current better will change if move is not a call.
+  listBuilder.add(new Set(CURRENT_BETTER, P[2]));
+  listBuilder.add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3]))).
+  add(new Set(PLAYER_BETS, ImmutableList.of(0, 0,0, 0))).
+  add(new Set(PLAYER_CHIPS, ImmutableList.of(1500 - 500, 2000, 3000, 5000))).
+  add(new Set(POTS, pots)).
+  add(new SetVisibility(C+(4*2+3)));
+  return listBuilder.build();
+  }
   
   /**
    * Utility methods
