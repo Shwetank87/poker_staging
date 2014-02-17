@@ -9,8 +9,10 @@ import java.util.Map;
 
 import org.poker.client.Card.Rank;
 import org.poker.client.Card.Suit;
+import org.poker.client.GameApi.AttemptChangeTokens;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
+import org.poker.client.GameApi.SetTurn;
 import org.poker.client.GameApi.SetVisibility;
 import org.poker.client.GameApi.Shuffle;
 import org.poker.client.GameApi.VerifyMove;
@@ -47,14 +49,51 @@ public class PokerLogic {
     // TODO: I will implement this method in HW2
     return new VerifyMoveDone();
   }
+  
+  private void checkMoveIsLegal(VerifyMove verifyMove) {
+    List<Operation> expectedOperations = getExpectedOperations(verifyMove);
+  }
+  
+  private List<Operation> getExpectedOperations(VerifyMove verifyMove) {
+    return getExpectedOperations(
+        verifyMove.getLastState(),
+        verifyMove.getLastMove(),
+        verifyMove.getPlayerIds(),
+        verifyMove.getLastMovePlayerId(),
+        verifyMove.getPlayerIdToNumberOfTokensInPot());
+  }
+  
+  private List<Operation> getExpectedOperations(
+      Map<String, Object> lastApiState, List<Operation> lastMove, List<Integer> playerIds,
+      int lastMovePlayerId, Map<Integer, Integer> playerIdToNumberOfTokensInPot) {
+    if(lastApiState.isEmpty()) {
+      if(lastMove.get(0) instanceof AttemptChangeTokens) {
+        // Player's move was to "buy-in"
+        int buyInAmount = playerIdToNumberOfTokensInPot.get(lastMovePlayerId);
+        return getInitialBuyInMove(lastMovePlayerId, buyInAmount);
+      }
+      else {
+        // Initial move performed by the dealer
+        return getInitialMove(playerIds, playerIdToNumberOfTokensInPot);
+      }
+      //TODO: check other cases
+    }
+    
+    return Lists.newArrayList();
+  }
 
-  List<Operation> getInitialMove(int[] playerIds, int[] startingChips) {
+  private List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
+    return ImmutableList.<Operation>of(
+        new AttemptChangeTokens(
+            ImmutableMap.<Integer, Integer>of(playerId, buyInAmount*(-1)),
+            ImmutableMap.<Integer, Integer>of(playerId, buyInAmount)));
+  }
+  
+  List<Operation> getInitialMove(List<Integer> playerIds, Map<Integer, Integer> startingChips) {
 
-    check(playerIds != null && startingChips != null);
-    check(playerIds.length == startingChips.length);
-    check(playerIds.length >= 2 && playerIds.length <= 9);
+    check(playerIds.size() >= 2 && playerIds.size() <= 9);
 
-    int numberOfPlayers = playerIds.length;
+    int numberOfPlayers = playerIds.size();
     boolean isHeadsUp = (numberOfPlayers == 2);
     int smallBlindPos = isHeadsUp ? 0 : 1;
     int bigBlindPos = isHeadsUp ? 1 : 2;
@@ -62,11 +101,11 @@ public class PokerLogic {
 
     List<Operation> operations = new ArrayList<Operation>();
 
-    operations.add(new Set(NUMBER_OF_PLAYERS, playerIds.length));
-
     // In heads-up match, P0(dealer) to act.
     // Otherwise, player after big blind to act
-    operations.add(new Set(WHOSE_MOVE, isHeadsUp ? P[0] : P[3 % numberOfPlayers]));
+    operations.add(new SetTurn(isHeadsUp ? playerIds.get(0) : playerIds.get(3 % numberOfPlayers)));
+    
+    operations.add(new Set(NUMBER_OF_PLAYERS, numberOfPlayers));
 
     // Big blind will be the current better
     operations.add(new Set(CURRENT_BETTER, isHeadsUp ? P[1] : P[2]));
@@ -105,12 +144,13 @@ public class PokerLogic {
     // Assign starting chips (minus blinds)
     List<Integer> playerChipsList = Lists.newArrayList();
     for (int i = 0; i < numberOfPlayers; i++) {
+      int playerId = playerIds.get(i);
       if (i == smallBlindPos)
-        playerChipsList.add(startingChips[i] - SMALL_BLIND);
+        playerChipsList.add(startingChips.get(playerId) - SMALL_BLIND);
       else if (i == bigBlindPos)
-        playerChipsList.add(startingChips[i] - BIG_BLIND);
+        playerChipsList.add(startingChips.get(playerId) - BIG_BLIND);
       else
-        playerChipsList.add(startingChips[i]);
+        playerChipsList.add(startingChips.get(playerId));
     }
     operations.add(new Set(PLAYER_CHIPS, playerChipsList));
     
@@ -126,8 +166,8 @@ public class PokerLogic {
     
     // Make hole cards visible to players holding them
     for (int i = 0; i < numberOfPlayers; i++) {
-      operations.add(new SetVisibility(C + (i * 2), ImmutableList.of(playerIds[i])));
-      operations.add(new SetVisibility(C + (i * 2 + 1), ImmutableList.of(playerIds[i])));
+      operations.add(new SetVisibility(C + (i * 2), ImmutableList.of(playerIds.get(i))));
+      operations.add(new SetVisibility(C + (i * 2 + 1), ImmutableList.of(playerIds.get(i))));
     }
     // Make remaining cards not visible to anyone
     for (int i = 2 * numberOfPlayers; i < 52; i++) {
