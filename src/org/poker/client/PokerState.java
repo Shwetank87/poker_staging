@@ -25,6 +25,8 @@ public class PokerState {
   private ImmutableList<Optional<Card>> cards;
 
   private ImmutableList<Player> playersInHand;
+  
+  private ImmutableList<Player> foldedPlayers;
 
   /**
    * List of hole cards belonging to each player List of bets made by each
@@ -49,6 +51,7 @@ public class PokerState {
       ImmutableList<Optional<Card>> cards,
       ImmutableList<Optional<Integer>> board,
       ImmutableList<Player> playersInHand,
+      ImmutableList<Player> foldedPlayers,
       ImmutableList<ImmutableList<Optional<Integer>>> holeCards,
       ImmutableList<Integer> playerBets, ImmutableList<Integer> playerChips,
       ImmutableList<Pot> pots) {
@@ -59,11 +62,72 @@ public class PokerState {
     this.currentRound = currentRound;
     this.cards = cards;
     this.playersInHand = playersInHand;
+    this.foldedPlayers = foldedPlayers;
     this.holeCards = holeCards;
     this.board = board;
     this.playerBets = playerBets;
     this.playerChips = playerChips;
     this.pots = pots;
+  }
+
+
+  public int getNumberOfPlayers() {
+    return numberOfPlayers;
+  }
+
+
+  public Player getWhoseMove() {
+    return whoseMove;
+  }
+
+
+  public Player getCurrentBetter() {
+    return currentBetter;
+  }
+
+
+  public BettingRound getCurrentRound() {
+    return currentRound;
+  }
+
+
+  public ImmutableList<Optional<Card>> getCards() {
+    return cards;
+  }
+
+
+  public ImmutableList<Player> getPlayersInHand() {
+    return playersInHand;
+  }
+  
+  
+  public ImmutableList<Player> getFoldedPlayers() {
+    return foldedPlayers;
+  }
+
+
+  public ImmutableList<ImmutableList<Optional<Integer>>> getHoleCards() {
+    return holeCards;
+  }
+
+
+  public ImmutableList<Optional<Integer>> getBoard() {
+    return board;
+  }
+
+
+  public ImmutableList<Integer> getPlayerBets() {
+    return playerBets;
+  }
+
+
+  public ImmutableList<Integer> getPlayerChips() {
+    return playerChips;
+  }
+
+
+  public ImmutableList<Pot> getPots() {
+    return pots;
   }
 
 }

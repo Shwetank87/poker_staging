@@ -17,5 +17,16 @@ public class Pot {
     this.playersInPot = playersInPot;
   }
 
+  public int getChips() {
+    return chips;
+  }
+
+  public int getCurrentPotBet() {
+    return currentPotBet;
+  }
+
+  public ImmutableList<Player> getPlayersInPot() {
+    return playersInPot;
+  }
   
 }
