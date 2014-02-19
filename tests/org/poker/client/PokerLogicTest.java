@@ -3,9 +3,11 @@ package org.poker.client;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.poker.client.GameApi.AttemptChangeTokens;
 import org.poker.client.GameApi.EndGame;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
+import org.poker.client.GameApi.SetTurn;
 import org.poker.client.GameApi.SetVisibility;
 import org.poker.client.GameApi.VerifyMove;
 
@@ -24,6 +26,8 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
    */
   private final ImmutableMap<String, Object> riverThreePlayerDealersTurnState = 
       ImmutableMap.<String, Object>builder().
+          put(PREVIOUS_MOVE, PokerMove.CALL).
+          put(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE).
           put(NUMBER_OF_PLAYERS, 3).
           put(WHOSE_MOVE, P[0]).
           put(CURRENT_BETTER, P[1]).
@@ -37,41 +41,96 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
           put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
               CHIPS, 3800,
               CURRENT_POT_BET, 400,
-              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[0])))).
+              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[0]),
+              PLAYER_BETS, ImmutableList.of(0, 400, 400)))).
           build();
 
   /**
-   * P0 folds and the hand ends.
-   * Assume P1 wins.
+   * P0 folds and the hand ends.<Br>
+   * P0 will: <ul>
+   * <li>Set betting round as SHOWDOWN</li>
+   * <li>Assign next turn to himself</li>
+   * <li>Set visibility of hole cards of players in hand to all</li>
+   * </ul>
    */
   private final ImmutableList<Operation> riverThreePlayerDealerFolds =
       ImmutableList.<Operation>of(
+          new SetTurn(p0_id),
+          new Set(PREVIOUS_MOVE, PokerMove.FOLD),
+          new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE),
           new Set(CURRENT_ROUND, BettingRound.SHOWDOWN.name()),
           new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2])),
-          new Set(PLAYER_CHIPS, ImmutableList.of(2000, 1600 + 3800, 1600)),
-          new EndGame(p1_id));
+          new Set(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
+              CHIPS, 3800,
+              CURRENT_POT_BET, 400,
+              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2]),
+              PLAYER_BETS, ImmutableList.of(0, 400, 400)))),
+          new SetVisibility("C2"), new SetVisibility("C3"),
+          new SetVisibility("C4"), new SetVisibility("C5"));
   
   /**
-   * P0 calls and the hand ends.
-   * Assume P1 wins.
+   * P0 calls and the hand ends.<Br>
+   * P0 will: <ul>
+   * <li>Set betting round as SHOWDOWN</li>
+   * <li>Assign next turn to himself</li>
+   * <li>Set visibility of hole cards of players in hand to all</li>
+   * </ul>
    */
   private final ImmutableList<Operation> riverThreePlayerDealerCalls =
       ImmutableList.<Operation>of(
+          new SetTurn(p0_id),
+          new Set(PREVIOUS_MOVE, PokerMove.CALL),
+          new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE),
           new Set(CURRENT_ROUND, BettingRound.SHOWDOWN.name()),
-          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[0])),
-          new Set(PLAYER_CHIPS, ImmutableList.of(2000 - 400, 1600 + 3800, 1600)),
-          new EndGame(p1_id));
+          new Set(PLAYER_BETS, ImmutableList.of(400, 400, 400)),
+          new Set(PLAYER_CHIPS, ImmutableList.of(2000 - 400, 1600, 1600)),
+          new Set(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
+              CHIPS, 4200,
+              CURRENT_POT_BET, 400,
+              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[0]),
+              PLAYER_BETS, ImmutableList.of(400, 400, 400)))),
+              new SetVisibility("C0"), new SetVisibility("C1"),
+              new SetVisibility("C2"), new SetVisibility("C3"),
+              new SetVisibility("C4"), new SetVisibility("C5"));
+  
+
+  /**
+   * 3-way hand in ShowDown state<Br>
+   * Pot amount before River: 4200<Br>
+   * P0 has the turn and needs to mark EndGame<br>
+   * Assume that P1 has the best hand.
+   */
+  private final ImmutableMap<String, Object> showdownThreePlayerDealersTurnState = 
+      ImmutableMap.<String, Object>builder().
+          put(PREVIOUS_MOVE, PokerMove.CALL).
+          put(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE).
+          put(NUMBER_OF_PLAYERS, 3).
+          put(WHOSE_MOVE, P[0]).
+          put(CURRENT_BETTER, P[1]).
+          put(CURRENT_ROUND, BettingRound.SHOWDOWN.name()).
+          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[0])).
+          put(HOLE_CARDS, ImmutableList.of(
+              ImmutableList.of(0, 1), ImmutableList.of(2, 3), ImmutableList.of(4, 5))).
+          put(BOARD, ImmutableList.of(6, 7, 8, 9, 10)).
+          put(PLAYER_BETS, ImmutableList.of(400, 400, 400)).
+          put(PLAYER_CHIPS, ImmutableList.of(1600, 1600, 1600)).
+          put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
+              CHIPS, 4200,
+              CURRENT_POT_BET, 400,
+              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[0]),
+              PLAYER_BETS, ImmutableList.of(400, 400, 400)))).
+          build();
   
   /**
-   * P0 folds but declare himself winner.
+   * P0 rightly declares P1 as winner.
    */
-  private final ImmutableList<Operation> riverThreePlayerDealerFoldsAndWins =
+  private final ImmutableList<Operation> showdownThreePlayerDealerMakesP1Winner =
       ImmutableList.<Operation>of(
-          new Set(CURRENT_ROUND, BettingRound.SHOWDOWN.name()),
-          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2])),
-          new Set(PLAYER_CHIPS, ImmutableList.of(2000, 1600 + 3800, 1600)),
-          new EndGame(p0_id));
- 
+          new AttemptChangeTokens(
+              ImmutableMap.<Integer, Integer>of(p0_id, 1600, p1_id, 1600 + 4200, p2_id, 1600),
+              ImmutableMap.<Integer, Integer>of(p0_id, 0, p1_id, 0, p2_id, 0)),
+          new EndGame(p1_id));
+
   
   /**
    * 4 way hand on Flop<Br>
@@ -82,6 +141,8 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
    */
   private final ImmutableMap<String, Object> flopFourPlayerDealerTurnState =
       ImmutableMap.<String, Object>builder().
+      put(PREVIOUS_MOVE, PokerMove.CALL).
+      put(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE).
       put(NUMBER_OF_PLAYERS, 4).
       put(WHOSE_MOVE, P[0]).
       put(CURRENT_BETTER, P[1]).
@@ -97,22 +158,26 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
           ImmutableMap.<String, Object>of(
               CHIPS, 3500,
               CURRENT_POT_BET, 500,
-              PLAYERS_IN_POT, ImmutableList.of(P[0], P[1], P[2], P[3])))).
+              PLAYERS_IN_POT, ImmutableList.of(P[0], P[1], P[2], P[3]),
+              PLAYER_BETS, ImmutableList.of(0, 500, 500, 500)))).
       build();
   
   private final ImmutableList<Operation> flopFourPlayerDealerCalls =
       ImmutableList.<Operation>builder().
+          add(new SetTurn(p1_id)).
+          add(new Set(PREVIOUS_MOVE, PokerMove.CALL)).
+          add(new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE)).
           add(new Set(WHOSE_MOVE, P[1])).
           add(new Set(CURRENT_BETTER, P[1])). // P1 will be current better initially in new round.
           add(new Set(CURRENT_ROUND, BettingRound.TURN.name())).
-          add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0]))).
           add(new Set(PLAYER_BETS, ImmutableList.of(0, 0, 0, 0))).
           add(new Set(PLAYER_CHIPS, ImmutableList.of(1500 - 500, 2000, 3000, 5000))).
           add(new Set(POTS, ImmutableList.of(
               ImmutableMap.<String, Object>of(
-                  CHIPS, 2000 + 500 + 500 + 500,
+                  CHIPS, 3500 + 500,
                   CURRENT_POT_BET, 0,
-                  PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0]))))).
+                  PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3], P[0]),
+                  PLAYER_BETS, ImmutableList.of(0, 0, 0, 0))))).
           add(new SetVisibility(C + (4 * 2 + 3))).
           build();
   
@@ -120,7 +185,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   // Tests
   
   @Test
-  public void testEndGameAfterLastPlayerFolds() {
+  public void testEndHandAfterLastPlayerFolds() {
     // Last player folds and the hand ends
     VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
         riverThreePlayerDealerFolds, playersInfo_3_players);
@@ -128,7 +193,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   }
   
   @Test
-  public void testEndGameAfterLastPlayerCalls() {
+  public void testEndHandAfterLastPlayerCalls() {
     // Last player calls and the hand ends
     VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
         riverThreePlayerDealerCalls, playersInfo_3_players);
@@ -136,12 +201,13 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   }
   
   @Test
-  public void testEndGameWithWrongPlayerVictory() {
+  public void testEndGame() {
     // Last player folds and the hand ends
-    VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
-        riverThreePlayerDealerFoldsAndWins, playersInfo_3_players);
-    assertHacker(verifyMove);
+    VerifyMove verifyMove = move(p0_id, showdownThreePlayerDealersTurnState,
+        showdownThreePlayerDealerMakesP1Winner, playersInfo_3_players);
+    assertMoveOk(verifyMove);
   }
+  //TODO: negative of this test will depend on how shuffle operation behaves 
   
   @Test
   public void testFlopToTurnTransition() {

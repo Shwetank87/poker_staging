@@ -21,6 +21,8 @@ public abstract class AbstractPokerLogicTestBase {
   protected static final String[] P = {"P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"};
   protected static final String C = "C";
   
+  protected static final String PREVIOUS_MOVE = "previousMove";
+  protected static final String PREVIOUS_MOVE_ALL_IN = "previousMoveAllIn";
   protected static final String NUMBER_OF_PLAYERS = "numberOfPlayers";
   protected static final String WHOSE_MOVE = "whoseMove";
   protected static final String CURRENT_BETTER = "currentBetter";
