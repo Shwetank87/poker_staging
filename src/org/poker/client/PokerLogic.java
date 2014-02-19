@@ -30,6 +30,8 @@ public class PokerLogic {
   private static final String[] P = {"P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"};
   private static final String C = "C";
 
+  private static final String PREVIOUS_MOVE = "previousMove";
+  private static final String PREVIOUS_MOVE_ALLIN = "previousMoveAllIn";
   private static final String NUMBER_OF_PLAYERS = "numberOfPlayers";
   private static final String WHOSE_MOVE = "whoseMove";
   private static final String CURRENT_BETTER = "currentBetter";
@@ -43,6 +45,7 @@ public class PokerLogic {
   private static final String CHIPS = "chips";
   private static final String CURRENT_POT_BET = "currentPotBet";
   private static final String PLAYERS_IN_POT = "playersInPot";
+  
 
 
   public VerifyMoveDone verify(VerifyMove verifyMove) {
@@ -66,6 +69,7 @@ public class PokerLogic {
   private List<Operation> getExpectedOperations(
       Map<String, Object> lastApiState, List<Operation> lastMove, List<Integer> playerIds,
       int lastMovePlayerId, Map<Integer, Integer> playerIdToNumberOfTokensInPot) {
+    // if initial move
     if(lastApiState.isEmpty()) {
       if(lastMove.get(0) instanceof AttemptChangeTokens) {
         // Player's move was to "buy-in"
@@ -80,6 +84,9 @@ public class PokerLogic {
     
     PokerState lastState = gameApiStateToPokerState(lastApiState,
         Player.values()[playerIds.indexOf(lastMovePlayerId)]);
+    
+    PokerMove previousMove = PokerMove.valueOf((String)((Set)lastMove.get(0)).getValue());
+    boolean isNewRoundStarting = isNewRoundStarting(lastState, previousMove);
     
     String lastMoveRound = (String) getSetOperationVal(CURRENT_ROUND, lastMove);
     boolean isNewRound = lastState.getCurrentRound().name().equals(lastMoveRound);
@@ -106,6 +113,27 @@ public class PokerLogic {
       lastRequiredBet = calculateLastRequiredBet(lastState);
     }
     //int lastPlayerPotAmount = playerChips.get(lastPlayerIndex);
+    
+    
+    if (previousMove == PokerMove.CALL) {
+      return doCallMove(lastState);
+    }
+    else if (previousMove == PokerMove.BET) {
+      return doBetMove(lastState, lastMove);
+    }
+    else if (previousMove == PokerMove.RAISE) {
+      return doRaiseMove(lastState, lastMove);
+    }
+    else if (previousMove == PokerMove.CHECK) {
+      return doCheckMove(lastState, lastMove);
+    }
+    else if (previousMove == PokerMove.FOLD) {
+      return doFoldMove(lastState, lastMove);
+    }
+    
+    
+    
+    
     
     if(isNewRound) {
       // A new round has begun.
@@ -142,7 +170,60 @@ public class PokerLogic {
     //TODO: check other cases
     return Lists.newArrayList();
   }
-  
+
+  private boolean isNewRoundStarting(PokerState lastState,
+      PokerMove previousMove) {
+    if (previousMove == PokerMove.BET || previousMove == PokerMove.RAISE) {
+      return false;
+    }
+    if (previousMove == PokerMove.ALL_IN && isAllInHigherThanCall(lastState)) {
+      return false;
+    }
+    // If its a big blind move in preflop and he checks, round ends
+    if (lastState.getCurrentRound() == BettingRound.PRE_FLOP && 
+        calculateLastRequiredBet(lastState) == getBigBlindAmount() &&
+        isBigBlindMove(lastState) &&
+        (previousMove == PokerMove.CHECK || previousMove == PokerMove.FOLD)) {
+      return true;
+    }
+    
+    boolean isNewRoundStarting = false;
+    List<Player> playersInHand = lastState.getPlayersInHand();
+    int currentBetterIndex = playersInHand.indexOf(lastState.getCurrentBetter());
+    int lastPlayerListIndex = playersInHand.indexOf(lastState.getWhoseMove());
+    for(int i=1; i<playersInHand.size(); i++) {
+      int listIndex = (i + lastPlayerListIndex) % playersInHand.size();
+      if(listIndex == currentBetterIndex) {
+        // Reached the current better. The round will end unless its preflop bigblind bet.        
+        isNewRoundStarting = true;
+        break;
+      }
+      if(lastState.getPlayerChips().get(i) == 0) {
+        // This player is all-in. Continue to next player
+        continue;
+      }
+    }
+    
+    // Special case for pre-flop bigblind bet. The round goes on to big blind
+    if (isNewRoundStarting) {
+      if (lastState.getCurrentRound() == BettingRound.PRE_FLOP &&
+          calculateLastRequiredBet(lastState) == getBigBlindAmount()) {
+         isNewRoundStarting = false;
+      }
+    }
+    
+    return isNewRoundStarting;
+  }
+
+  private boolean isAllInHigherThanCall(PokerState lastState) {
+    int whoseTurnIndex = lastState.getWhoseMove().ordinal();
+    int toCallAmount = calculateLastRequiredBet(lastState) - 
+        lastState.getPlayerBets().get(whoseTurnIndex);
+    int lastMoveAmount = lastState.getPlayerChips().get(whoseTurnIndex);
+    
+    return (lastMoveAmount > toCallAmount);
+  }
+
   private List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
     return ImmutableList.<Operation>of(
         new AttemptChangeTokens(
@@ -166,6 +247,7 @@ public class PokerLogic {
     // Otherwise, player after big blind to act
     operations.add(new SetTurn(isHeadsUp ? playerIds.get(0) : playerIds.get(3 % numberOfPlayers)));
     
+    operations.add(new Set())
     operations.add(new Set(NUMBER_OF_PLAYERS, numberOfPlayers));
 
     // Big blind will be the current better
@@ -261,6 +343,7 @@ public class PokerLogic {
   }
   
   List<Operation> doCallMove(PokerState state) {
+    //ToDo: Make consistent wrt new state and SETTURN instead of whoseMove
     List<Operation> operations = Lists.newArrayList();
     int playerIndex = state.getWhoseMove().ordinal();
     int currentBetterIndex = state.getCurrentBetter().ordinal();
@@ -268,8 +351,11 @@ public class PokerLogic {
     int currentPlayerChips = state.getPlayerChips().get(playerIndex);
     int requiredBetAmount = calculateLastRequiredBet(state);
     int nextPlayerIndex = calculateNextPlayerIndex(state, currentBetterIndex);
-    if(nextPlayerIndex != -1) {
+    
+    // If new Round does not start by Call move
+    if(! isNewRoundStarting(state, PokerMove.CALL )) {
       operations.add(new Set(WHOSE_MOVE, P[nextPlayerIndex]));
+      // If player is not in hand
       if(!state.getPlayersInHand().contains(state.getWhoseMove())) {
         List<Player> newPlayersInHand = addOrReplaceInList(state.getPlayersInHand(),
             state.getWhoseMove(), state.getPlayersInHand().size());
@@ -278,6 +364,7 @@ public class PokerLogic {
       List<Integer> newPlayerBets = addOrReplaceInList(state.getPlayerBets(),
           Integer.valueOf(requiredBetAmount), playerIndex);
       operations.add(new Set(PLAYER_BETS, newPlayerBets));
+      
       List<Integer> newPlayerChips = addOrReplaceInList(state.getPlayerChips(),
           Integer.valueOf(currentPlayerChips - (requiredBetAmount - currentBetAmount)),
           playerIndex);
@@ -431,9 +518,10 @@ public class PokerLogic {
     return playerListBuilder.build();
   }
   
-  private int getBigBlindIndex(PokerState state) {
+  private boolean isBigBlindMove(PokerState state) {
     int numberOfPlayers = state.getNumberOfPlayers();
-    return numberOfPlayers > 2 ? 2 : 1;
+    int bigBlindIndex = numberOfPlayers > 2 ? 2 : 1;
+    return state.getWhoseMove().ordinal() == bigBlindIndex;
   }
   
   private int getBigBlindAmount() {
