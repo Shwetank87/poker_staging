@@ -17,7 +17,8 @@ import com.google.common.collect.ImmutableList;
 public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   private List<Operation> getInitialOperations(int[] playerIds, int[] startingChips) {
-    return pokerLogic.getInitialMove(playerIds, startingChips);
+    //return pokerLogic.getInitialMove(playerIds, startingChips);
+    return null;
   }
   
   

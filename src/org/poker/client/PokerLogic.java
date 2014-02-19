@@ -69,7 +69,8 @@ public class PokerLogic {
   private List<Operation> getExpectedOperations(
       Map<String, Object> lastApiState, List<Operation> lastMove, List<Integer> playerIds,
       int lastMovePlayerId, Map<Integer, Integer> playerIdToNumberOfTokensInPot) {
-    // if initial move
+    
+    // Handle initial move (empty last state)
     if(lastApiState.isEmpty()) {
       if(lastMove.get(0) instanceof AttemptChangeTokens) {
         // Player's move was to "buy-in"
@@ -85,91 +86,195 @@ public class PokerLogic {
     PokerState lastState = gameApiStateToPokerState(lastApiState,
         Player.values()[playerIds.indexOf(lastMovePlayerId)]);
     
-    PokerMove previousMove = PokerMove.valueOf((String)((Set)lastMove.get(0)).getValue());
-    boolean isNewRoundStarting = isNewRoundStarting(lastState, previousMove);
-    
-    String lastMoveRound = (String) getSetOperationVal(CURRENT_ROUND, lastMove);
-    boolean isNewRound = lastState.getCurrentRound().name().equals(lastMoveRound);
+    // First operation will be SetTurn and second operation will be Set(PreviuosMove)
+    //TODO: except in case of end game. handle that case.
+    PokerMove previousMove = PokerMove.valueOf((String)((Set)lastMove.get(1)).getValue());
 
-    int lastPlayerIndex = playerIds.indexOf(lastMovePlayerId);
-    String lastPlayerStr = P[lastPlayerIndex];
-    
-    List<Player> lastStatePlayersInHand = lastState.getPlayersInHand();
-    List<Integer> lastStatePlayerBets = lastState.getPlayerBets();
-    List<Integer> lastStatePlayerChips = lastState.getPlayerChips();
-    
-    List<String> lastMovePlayersInHand = (List<String>)getSetOperationVal(PLAYERS_IN_HAND, lastMove);
-    List<Integer> lastMovePlayerBets = (List<Integer>)getSetOperationVal(PLAYER_BETS, lastMove);
-    List<Integer> lastMovePlayerChips = (List<Integer>)lastApiState.get(PLAYER_CHIPS);
-    
-    int lastPlayerBet = 0;
-    if(lastMovePlayerBets != null) {
-      lastPlayerBet =
-          lastMovePlayerBets.get(lastPlayerIndex) - lastStatePlayerBets.get(lastPlayerIndex);
-    }
-    
-    int lastRequiredBet = 0;
-    if(!isNewRound) {
-      lastRequiredBet = calculateLastRequiredBet(lastState);
-    }
-    //int lastPlayerPotAmount = playerChips.get(lastPlayerIndex);
-    
-    
-    if (previousMove == PokerMove.CALL) {
-      return doCallMove(lastState);
-    }
-    else if (previousMove == PokerMove.BET) {
-      return doBetMove(lastState, lastMove);
-    }
-    else if (previousMove == PokerMove.RAISE) {
-      return doRaiseMove(lastState, lastMove);
+    if (previousMove == PokerMove.FOLD) {
+      return doFoldMove(lastState, playerIds);
     }
     else if (previousMove == PokerMove.CHECK) {
-      return doCheckMove(lastState, lastMove);
+      return doCheckMove(lastState, playerIds);
     }
-    else if (previousMove == PokerMove.FOLD) {
-      return doFoldMove(lastState, lastMove);
+    else if (previousMove == PokerMove.CALL) {
+      return doCallMove(lastState, playerIds);
+    }
+    else if (previousMove == PokerMove.BET) {
+      return doBetMove(lastState, playerIds);
+    }
+    else if (previousMove == PokerMove.RAISE) {
+      return doRaiseMove(lastState, playerIds);
     }
     
-    
-    
-    
-    
-    if(isNewRound) {
-      // A new round has begun.
-      // Possible moves are Fold, Check, Bet (can be all-in).
-      if(playerFolded(lastStatePlayersInHand, lastMovePlayersInHand, lastPlayerIndex)) {
-        //TODO: Player folded
-      }
-      else if(lastPlayerBet == 0) {
-        //TODO: Player checked
-      }
-      else {
-        //TODO: Player posted a bet
-      }
-    }
-    else {
-      // The same round has continued.
-      // Possible moves are Fold, Check, Bet (can be all-in), Raise (can be all-in)
-      if(playerFolded(lastStatePlayersInHand, lastMovePlayersInHand, lastPlayerIndex)) {
-        //TODO: Player folded
-      }
-      else if(lastPlayerBet == 0) {
-        //TODO: Player checked
-      }
-      else if(lastPlayerBet == lastRequiredBet) {
-        //TODO: Player called
-      }
-      else if(lastRequiredBet == 0){
-        //TODO: Player posted a bet
-      }
-      else {
-        //TODO: Player raised.
-      }
-    }
-    //TODO: check other cases
-    return Lists.newArrayList();
+    //All possible states have been checked
+    throw new IllegalStateException("No Expected move can be found");
   }
+  
+  /**
+   * Generates List of Operation objects for performing
+   * a Fold move by the current player.
+   * 
+   * @param lastState
+   * @param playerIds
+   * @return
+   */
+  private List<Operation> doFoldMove(PokerState lastState, List<Integer> playerIds) {
+    
+    if(isGameOverAfterFold(lastState)) {
+      return doGameOverAfterFold(lastState);
+    }
+    
+    if (isNewRoundStarting(lastState, PokerMove.FOLD)) {
+      return doNewRoundAfterFoldMove();
+    }
+    
+    List<Operation> operations = Lists.newArrayList();
+    
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
+    
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.FOLD.name()));
+    
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    // Remove player from PLAYERS_IN_HAND
+    List<String> playersInHand = getStrPlayerList(lastState.getPlayersInHand());
+    List<String> newPlayersInHand = removeFromList(playersInHand, lastState.getWhoseMove().name());
+    operations.add(new Set(PLAYERS_IN_HAND, newPlayersInHand));
+    
+    // Remove player from all pots
+    List<Pot> pots = lastState.getPots();
+    List<Map<String, Object>> newPots = Lists.newArrayList();
+    for(Pot pot : pots) {
+      List<String> playersInPot = getStrPlayerList(pot.getPlayersInPot());
+      List<String> newPlayersInPot = removeFromList(playersInPot, lastState.getWhoseMove().name());
+      newPots.add(ImmutableMap.<String, Object>of(
+          CHIPS, pot.getChips(),
+          CURRENT_POT_BET, pot.getCurrentPotBet(),
+          PLAYERS_IN_POT, newPlayersInPot,
+          PLAYER_BETS, pot.getPlayerBets()));
+    }
+    operations.add(new Set(POTS, newPots));
+    
+    return operations;
+  }
+  
+  
+  /**
+   * Generates List of Operation objects for performing
+   * a Check move by the current player.
+   * 
+   * @param lastState
+   * @param playerIds
+   * @return
+   */
+  List<Operation> doCheckMove(PokerState lastState, List<Integer> playerIds) {
+    
+    boolean isNewRoundStarting = isNewRoundStarting(lastState, PokerMove.CHECK);
+    if (isNewRoundStarting) {
+      return doNewRoundAfterCheckMove();
+    }
+    
+    List<Operation> operations = Lists.newArrayList();
+    
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
+    
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.CHECK.name()));
+    
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    return operations;
+  }
+  
+  
+  /**
+   * Generates List of Operation objects for performing
+   * a Call move by the current player.
+   * 
+   * @param lastState
+   * @return
+   */
+  List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds) {
+    
+    if(isGameOverAfterCall()) {
+      return doGameOverAfterCallMove();
+    }
+    
+    if (isNewRoundStarting(lastState, PokerMove.CALL)) {
+      return doNewRoundAfterCheckMove();
+    }
+    
+    List<Operation> operations = Lists.newArrayList();
+    
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
+    
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.CALL.name()));
+    
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    // PLAYERS_IN_HAND should already contain this player
+    
+    int playerIndex = lastState.getWhoseMove().ordinal();
+    int requiredBetAmount = calculateLastRequiredBet(lastState);
+    List<Integer> newPlayerBets = addOrReplaceInList(lastState.getPlayerBets(),
+        Integer.valueOf(requiredBetAmount), playerIndex);
+    operations.add(new Set(PLAYER_BETS, newPlayerBets));
+    
+    int currentBetAmount = lastState.getPlayerBets().get(playerIndex);
+    int currentPlayerChips = lastState.getPlayerChips().get(playerIndex);
+    List<Integer> newPlayerChips = addOrReplaceInList(lastState.getPlayerChips(),
+        Integer.valueOf(currentPlayerChips - (requiredBetAmount - currentBetAmount)),
+        playerIndex);
+    operations.add(new Set(PLAYER_CHIPS, newPlayerChips));
+    
+    // Add call amount to all the pots
+    List<Pot> pots = lastState.getPots();
+    List<Map<String, Object>> newPots = Lists.newArrayList();
+    for(Pot pot : pots) {
+      List<String> playersInPot = getStrPlayerList(pot.getPlayersInPot());
+      List<String> newPlayersInPot = addToList(playersInPot, lastState.getWhoseMove().name());
+      List<Integer> playerPotBets = pot.getPlayerBets();
+      List<Integer> newPlayerPotBets = addOrReplaceInList(playerPotBets,
+          Integer.valueOf(pot.getCurrentPotBet()), playerIndex);
+      newPots.add(ImmutableMap.<String, Object>of(
+          CHIPS, pot.getChips(),
+          CURRENT_POT_BET, pot.getCurrentPotBet(),
+          PLAYERS_IN_POT, newPlayersInPot,
+          PLAYER_BETS, newPlayerPotBets));
+    }
+    operations.add(new Set(POTS, newPots));
+    
+    return operations;
+  }
+  
+  //TODO: provide bet amount as a parameter
+  private List<Operation> doBetMove(PokerState lastState, List<Integer> playerIds) {
+    
+    List<Operation> operations = Lists.newArrayList();
+    
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
+    
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.CALL.name()));
+    
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    int lastPlayerIndex = lastState.getWhoseMove().ordinal(); 
+    operations.add(new Set(CURRENT_BETTER, P[lastPlayerIndex]));
+    
+    //TODO: handle other operations
+    
+    return operations;
+  }
+
+  private List<Operation> doRaiseMove(PokerState lastState, List<Integer> playerIds) {
+    //TODO: code this
+    return null;
+  }
+
+  
 
   private boolean isNewRoundStarting(PokerState lastState,
       PokerMove previousMove) {
@@ -231,8 +336,7 @@ public class PokerLogic {
             ImmutableMap.<Integer, Integer>of(playerId, buyInAmount)));
   }
   
-  List<Operation> getInitialMove(List<Integer> playerIds, Map<Integer, Integer> startingChips) {
-
+  public List<Operation> getInitialMove(List<Integer> playerIds, Map<Integer, Integer> startingChips) {
     check(playerIds.size() >= 2 && playerIds.size() <= 9);
 
     int numberOfPlayers = playerIds.size();
@@ -247,7 +351,7 @@ public class PokerLogic {
     // Otherwise, player after big blind to act
     operations.add(new SetTurn(isHeadsUp ? playerIds.get(0) : playerIds.get(3 % numberOfPlayers)));
     
-    operations.add(new Set())
+    //operations.add(new Set())
     operations.add(new Set(NUMBER_OF_PLAYERS, numberOfPlayers));
 
     // Big blind will be the current better
@@ -320,88 +424,6 @@ public class PokerLogic {
     return operations;
   }
   
-  
-  List<Operation> doCheckMove(PokerState lastState) {
-    List<Operation> operations = Lists.newArrayList();
-    int currentBetterIndex = lastState.getCurrentBetter().ordinal();
-    int nextPlayerIndex = calculateNextPlayerIndex(lastState, currentBetterIndex);
-    if(nextPlayerIndex != -1) {
-      operations.add(new Set(WHOSE_MOVE, P[nextPlayerIndex]));
-      if(!lastState.getPlayersInHand().contains(lastState.getWhoseMove())) {
-        List<Player> newPlayersInHand = ImmutableList.<Player>builder()
-            .addAll(ImmutableList.copyOf(lastState.getPlayersInHand()))
-            .add(lastState.getWhoseMove())
-            .build();
-        operations.add(new Set(PLAYERS_IN_HAND, newPlayersInHand));
-      }
-      return operations;
-    }
-    else {
-      // TODO: Start a new round
-      return null;
-    }
-  }
-  
-  List<Operation> doCallMove(PokerState state) {
-    //ToDo: Make consistent wrt new state and SETTURN instead of whoseMove
-    List<Operation> operations = Lists.newArrayList();
-    int playerIndex = state.getWhoseMove().ordinal();
-    int currentBetterIndex = state.getCurrentBetter().ordinal();
-    int currentBetAmount = state.getPlayerBets().get(playerIndex);
-    int currentPlayerChips = state.getPlayerChips().get(playerIndex);
-    int requiredBetAmount = calculateLastRequiredBet(state);
-    int nextPlayerIndex = calculateNextPlayerIndex(state, currentBetterIndex);
-    
-    // If new Round does not start by Call move
-    if(! isNewRoundStarting(state, PokerMove.CALL )) {
-      operations.add(new Set(WHOSE_MOVE, P[nextPlayerIndex]));
-      // If player is not in hand
-      if(!state.getPlayersInHand().contains(state.getWhoseMove())) {
-        List<Player> newPlayersInHand = addOrReplaceInList(state.getPlayersInHand(),
-            state.getWhoseMove(), state.getPlayersInHand().size());
-        operations.add(new Set(PLAYERS_IN_HAND, newPlayersInHand));
-      }
-      List<Integer> newPlayerBets = addOrReplaceInList(state.getPlayerBets(),
-          Integer.valueOf(requiredBetAmount), playerIndex);
-      operations.add(new Set(PLAYER_BETS, newPlayerBets));
-      
-      List<Integer> newPlayerChips = addOrReplaceInList(state.getPlayerChips(),
-          Integer.valueOf(currentPlayerChips - (requiredBetAmount - currentBetAmount)),
-          playerIndex);
-      operations.add(new Set(PLAYER_CHIPS, newPlayerChips));
-      List<Map<String, Object>> newPots = addChipsInPots(state.getPots(), state.getWhoseMove(),
-          requiredBetAmount - currentBetAmount);
-      operations.add(new Set(POTS, newPots));
-    }
-    else {
-      // TODO: Start a new round
-    }
-    //TODO: fix
-    return null;
-  }
-  
-  private boolean playerFolded(List<Player> statePlayers, List<String> movePlayers,
-      int playerIndex) {
-    if(movePlayers == null) {
-      // Player didn't update list of players in hand
-      if(statePlayers.contains(Player.values()[playerIndex])) {
-        return false;
-      }
-      else {
-        return true;
-      }
-    }
-    else {
-      // Players updated list of players in hand
-      if(movePlayers.contains(P[playerIndex])) {
-        return false;
-      }
-      else {
-        return true;
-      }
-    }
-  }
-  
   private int calculateLastRequiredBet(PokerState lastState) {
     List<Pot> pots = lastState.getPots();
     int totalRequiredBet = 0;
@@ -409,6 +431,22 @@ public class PokerLogic {
       totalRequiredBet += pot.getCurrentPotBet();
     }
     return totalRequiredBet;
+  }
+  
+  /**
+   * If given object doesn't exist in the list, adds it to the end.
+   * Otherwise returns a copy of the original list.
+   * 
+   * @param list List to alter
+   * @param obj Object to add
+   * @return Possibly altered list, definitely containing given element
+   */
+  private <T> ImmutableList<T> addToList(List<T> list, T obj) {
+    int index = list.indexOf(obj);
+    if(index == -1) {
+      return addOrReplaceInList(list, obj, list.size());
+    }
+    return ImmutableList.<T>copyOf(list);
   }
   
   private <T> ImmutableList<T> addOrReplaceInList(List<T> list, T obj, int index) {
@@ -430,55 +468,53 @@ public class PokerLogic {
       throw new IllegalArgumentException("Invalid index " + index);
     }
   }
-  
-  //TODO: Add current better cross checking
-  private int calculateNextPlayerIndex(PokerState lastState, int currentBetterIndex) {
-    if(lastState.getCurrentRound() == BettingRound.PRE_FLOP) {
-      return calculateNextPlayerIndexPreFlop(lastState, currentBetterIndex);
+    
+  private <T> ImmutableList<T> removeFromList(List<T> list, T obj) {
+    int index = list.indexOf(obj);
+    if(index == -1) {
+      throw new IllegalArgumentException("Object not found in list");
     }
+    return removeFromList(list, index);
+  }
+  
+  private <T> ImmutableList<T> removeFromList(List<T> list, int index) {
+    if(index == list.size() - 1) {
+      //replace last element
+      return ImmutableList.<T>builder().addAll(list.subList(0, index)).build();
+    }
+    else if(index >= 0 && index < list.size() - 1) {
+      //replace some element (not last)
+      return ImmutableList.<T>builder().
+          addAll(list.subList(0, index)).
+          addAll(list.subList(index+1, list.size() - 1)).build();
+    }
+    else {
+      throw new IllegalArgumentException("Invalid index " + index);
+    }
+  }
+  
+  /**
+   * This method gets the index of the next player to act.
+   * It assumes that round will not end after the current move.
+   * 
+   * @param state Last PokerState
+   * @return index of next player to act
+   */
+  private int getNextTurnIndex(PokerState lastState) {
     List<Player> playersInHand = lastState.getPlayersInHand();
     int lastPlayerListIndex = playersInHand.indexOf(lastState.getWhoseMove());
     for(int i=1; i<playersInHand.size(); i++) {
       int listIndex = (i + lastPlayerListIndex) % playersInHand.size();
-      if(listIndex == currentBetterIndex) {
-        // Reached the current better. The round will end.
-        return -1;
-      }
       if(lastState.getPlayerChips().get(i) == 0) {
         // This player is all-in. Continue to next player
         continue;
       }
       return listIndex;
     }
-    return -1;
+    // Code should never reach here if our assumptino was correct
+    throw new IllegalStateException("Next turn not found");
   }
   
-  private int calculateNextPlayerIndexPreFlop(PokerState lastState, int currentBetterIndex) {
-    int numberOfPlayers = lastState.getNumberOfPlayers();
-    int lastPlayerIndex = lastState.getWhoseMove().ordinal();
-    for(int i = 1; i < numberOfPlayers; i++) {
-      int index = (i + lastPlayerIndex) % numberOfPlayers;
-      if(index == currentBetterIndex) {
-        if(index == getBigBlindIndex(lastState) &&
-            lastState.getPlayerBets().get(index) == getBigBlindAmount()) {
-          return index;    
-        }
-        else {
-          return -1;
-        }
-      }
-      if(lastState.getFoldedPlayers().contains(Player.values()[index])) {
-        // This player already folded. Continue to next player.
-        continue;
-      }
-      if(lastState.getPlayerChips().get(index) == 0) {
-        // This player is all-in. Continue to next player.
-        continue;
-      }
-      return index;
-    }
-    return -1;
-  }
   
   private List<Map<String, Object>> addChipsInPots(List<Pot> pots, Player player, int chips) {
     List<Map<String, Object>> newPots = Lists.newArrayList();
@@ -590,4 +626,5 @@ public class PokerLogic {
           + Arrays.toString(debugArguments));
     }
   }
+
 }

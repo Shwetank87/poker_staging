@@ -69,9 +69,10 @@ public abstract class AbstractPokerLogicTestBase {
   
   protected VerifyMove move(int lastMovePlayerId, Map<String, Object> lastState,
       List<Operation> lastMove, List<Map<String, Object>> playersInfo) {
-    return new VerifyMove(p0_id, playersInfo,
+    /*return new VerifyMove(p0_id, playersInfo,
         emptyState, // we never need to check the resulting state
-        lastState, lastMove, lastMovePlayerId);
+        lastState, lastMove, lastMovePlayerId);*/
+    return null;
   }
 
   
