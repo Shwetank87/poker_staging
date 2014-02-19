@@ -172,7 +172,7 @@ public class PokerLogic {
     
     boolean isNewRoundStarting = isNewRoundStarting(lastState, PokerMove.CHECK);
     if (isNewRoundStarting) {
-      return doNewRoundAfterCheckMove();
+      return doNewRoundAfterCheckMove(lastState , playerIds);
     }
     
     List<Operation> operations = Lists.newArrayList();
@@ -182,12 +182,42 @@ public class PokerLogic {
     
     operations.add(new Set(PREVIOUS_MOVE, PokerMove.CHECK.name()));
     
+    operations.add(new Set(PREVIOUS_MOVE_ALLIN, new Boolean(false)));
+    
     operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
     
     return operations;
   }
   
   
+  private List<Operation> doNewRoundAfterCheckMove(PokerState lastState, List<Integer> playerIds) {
+    // TODO Auto-generated method stub
+    List<Operation> operations = Lists.newArrayList();
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    BettingRound nextRound = calculateNextRound(lastState.getCurrentRound());
+    boolean endGameFlag = nextRound == BettingRound.SHOWDOWN ? true : false;
+    
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
+    
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.CHECK.name()));
+    
+    operations.add(new Set(PREVIOUS_MOVE_ALLIN, new Boolean(false)));
+    
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    operations.add(new Set(CURRENT_ROUND, nextRound.name()));
+    
+    operations.addAll(setBoardVisibility(lastState,nextRound));
+    
+    
+    
+    
+    return null;
+  }
+
+  private BettingRound calculateNextRound(BettingRound currentRound) {
+    return BettingRound.values()[currentRound.ordinal()+1];
+  }
   /**
    * Generates List of Operation objects for performing
    * a Call move by the current player.
@@ -197,12 +227,12 @@ public class PokerLogic {
    */
   List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds) {
     
-    if(isGameOverAfterCall()) {
+    if(isGameOverAfterCall(lastState)) {
       return doGameOverAfterCallMove();
     }
     
     if (isNewRoundStarting(lastState, PokerMove.CALL)) {
-      return doNewRoundAfterCheckMove();
+      return doNewRoundAfterCallMove();
     }
     
     List<Operation> operations = Lists.newArrayList();
@@ -249,6 +279,13 @@ public class PokerLogic {
     return operations;
   }
   
+
+  private boolean isGameOverAfterCall(PokerState lastState) {
+    // TODO Auto-generated method stub
+    
+    return false;
+  }
+
   //TODO: provide bet amount as a parameter
   private List<Operation> doBetMove(PokerState lastState, List<Integer> playerIds) {
     
@@ -275,15 +312,13 @@ public class PokerLogic {
   }
 
   
-
+  //ToDo : Discuss All-In with Rohan again
   private boolean isNewRoundStarting(PokerState lastState,
       PokerMove previousMove) {
     if (previousMove == PokerMove.BET || previousMove == PokerMove.RAISE) {
       return false;
     }
-    if (previousMove == PokerMove.ALL_IN && isAllInHigherThanCall(lastState)) {
-      return false;
-    }
+    
     // If its a big blind move in preflop and he checks, round ends
     if (lastState.getCurrentRound() == BettingRound.PRE_FLOP && 
         calculateLastRequiredBet(lastState) == getBigBlindAmount() &&
@@ -329,7 +364,7 @@ public class PokerLogic {
     return (lastMoveAmount > toCallAmount);
   }
 
-  private List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
+  public List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
     return ImmutableList.<Operation>of(
         new AttemptChangeTokens(
             ImmutableMap.<Integer, Integer>of(playerId, buyInAmount*(-1)),
