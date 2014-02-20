@@ -3,7 +3,7 @@ package org.poker.client.util;
 import java.util.List;
 
 import org.poker.client.Card;
-import org.poker.client.PokerHand;
+import org.poker.client.util.PokerHand;
 
 import com.google.common.collect.Lists;
 

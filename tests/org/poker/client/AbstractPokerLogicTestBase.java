@@ -42,6 +42,8 @@ public abstract class AbstractPokerLogicTestBase {
   protected final int p2_id = 86;
   protected final int p3_id = 87;
   
+  protected final int[] playerIdArr = {p0_id, p1_id, p2_id, p3_id};
+  
   protected final ImmutableMap<String, Object> p0_info =
       ImmutableMap.<String, Object>of(PLAYER_ID, p0_id);
   protected final ImmutableMap<String, Object> p1_info =
@@ -58,6 +60,14 @@ public abstract class AbstractPokerLogicTestBase {
   protected final ImmutableList<Map<String, Object>> playersInfo_4_players =
       ImmutableList.<Map<String, Object>>of(p0_info, p1_info, p2_info, p3_info);
 
+  // dummy starting chips as they don't matter after initial move since
+  // chips information is already in the state.
+  protected final ImmutableMap<Integer, Integer> startingChips_2_player =
+      getStartingChips(5000, 5000);
+  protected final ImmutableMap<Integer, Integer> startingChips_3_player =
+      getStartingChips(5000, 5000, 5000);
+  protected final ImmutableMap<Integer, Integer> startingChips_4_player =
+      getStartingChips(5000, 5000, 5000, 5000);
   
   // States for different scenarios in tests
 
@@ -70,14 +80,22 @@ public abstract class AbstractPokerLogicTestBase {
   // Utility methods
   
   protected VerifyMove move(int lastMovePlayerId, Map<String, Object> lastState,
-      List<Operation> lastMove, List<Map<String, Object>> playersInfo) {
-    /*return new VerifyMove(p0_id, playersInfo,
+      List<Operation> lastMove, List<Map<String, Object>> playersInfo,
+      Map<Integer, Integer> playerIdToNumberOfTokensInPot) {
+    return new VerifyMove(playersInfo,
         emptyState, // we never need to check the resulting state
-        lastState, lastMove, lastMovePlayerId);*/
-    return null;
+        lastState, lastMove, lastMovePlayerId,
+        playerIdToNumberOfTokensInPot);
   }
-
   
+  protected ImmutableMap<Integer, Integer> getStartingChips(int... chips) {
+    ImmutableMap.Builder<Integer, Integer> builder = ImmutableMap.builder();
+    for (int i = 0; i < chips.length; i++) {
+      builder.put(playerIdArr[i], chips[i]);
+    }
+    return builder.build();
+  }
+    
   // Utility methods copied from CheatLogicTest.java in
   // https://github.com/yoav-zibin/cheat-game
 

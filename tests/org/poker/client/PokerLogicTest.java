@@ -188,7 +188,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   public void testEndHandAfterLastPlayerFolds() {
     // Last player folds and the hand ends
     VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
-        riverThreePlayerDealerFolds, playersInfo_3_players);
+        riverThreePlayerDealerFolds, playersInfo_3_players, startingChips_3_player);
     assertMoveOk(verifyMove);
   }
   
@@ -196,7 +196,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   public void testEndHandAfterLastPlayerCalls() {
     // Last player calls and the hand ends
     VerifyMove verifyMove = move(p0_id, riverThreePlayerDealersTurnState,
-        riverThreePlayerDealerCalls, playersInfo_3_players);
+        riverThreePlayerDealerCalls, playersInfo_3_players, startingChips_3_player);
     assertMoveOk(verifyMove);
   }
   
@@ -204,7 +204,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   public void testEndGame() {
     // Last player folds and the hand ends
     VerifyMove verifyMove = move(p0_id, showdownThreePlayerDealersTurnState,
-        showdownThreePlayerDealerMakesP1Winner, playersInfo_3_players);
+        showdownThreePlayerDealerMakesP1Winner, playersInfo_3_players, startingChips_3_player);
     assertMoveOk(verifyMove);
   }
   //TODO: negative of this test will depend on how shuffle operation behaves 
@@ -212,7 +212,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   @Test
   public void testFlopToTurnTransition() {
     VerifyMove verifyMove = move(p0_id, flopFourPlayerDealerTurnState,
-        flopFourPlayerDealerCalls, playersInfo_4_players);
+        flopFourPlayerDealerCalls, playersInfo_4_players, startingChips_4_player);
     assertMoveOk(verifyMove);
   }
   
@@ -225,7 +225,7 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
             add(new SetVisibility(C + (4 * 2 + 4))). // Set River card as open prematurely
             build();
     VerifyMove verifyMove = move(p0_id, flopFourPlayerDealerTurnState,
-        flopFourPlayerWrongCardsOpened, playersInfo_4_players);
+        flopFourPlayerWrongCardsOpened, playersInfo_4_players, startingChips_4_player);
     assertHacker(verifyMove);
   } 
 }

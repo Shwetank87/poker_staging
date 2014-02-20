@@ -33,8 +33,6 @@ public class PokerState {
 
   private ImmutableList<Player> playersInHand;
   
-  private ImmutableList<Player> foldedPlayers;
-
   /**
    * List of hole cards belonging to each player List of bets made by each
    * player List of chips held by each player
@@ -58,7 +56,6 @@ public class PokerState {
       ImmutableList<Optional<Card>> cards,
       ImmutableList<Optional<Integer>> board,
       ImmutableList<Player> playersInHand,
-      ImmutableList<Player> foldedPlayers,
       ImmutableList<ImmutableList<Optional<Integer>>> holeCards,
       ImmutableList<Integer> playerBets, ImmutableList<Integer> playerChips,
       ImmutableList<Pot> pots) {
@@ -71,7 +68,6 @@ public class PokerState {
     this.currentRound = currentRound;
     this.cards = cards;
     this.playersInHand = playersInHand;
-    this.foldedPlayers = foldedPlayers;
     this.holeCards = holeCards;
     this.board = board;
     this.playerBets = playerBets;
@@ -116,11 +112,6 @@ public class PokerState {
     return playersInHand;
   }
   
-  
-  public ImmutableList<Player> getFoldedPlayers() {
-    return foldedPlayers;
-  }
-
 
   public ImmutableList<ImmutableList<Optional<Integer>>> getHoleCards() {
     return holeCards;
