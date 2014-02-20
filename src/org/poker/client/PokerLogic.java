@@ -46,6 +46,7 @@ public class PokerLogic {
   private static final String CURRENT_POT_BET = "currentPotBet";
   private static final String PLAYERS_IN_POT = "playersInPot";
 
+  private PokerLogicHelper helper = PokerLogicHelper.getInstance();
 
   public VerifyMoveDone verify(VerifyMove verifyMove) {
     try {
@@ -98,8 +99,7 @@ public class PokerLogic {
       }
     }
     
-    PokerState lastState = gameApiStateToPokerState(lastApiState,
-        Player.values()[playerIds.indexOf(lastMovePlayerId)]);
+    PokerState lastState = helper.gameApiStateToPokerState(lastApiState);
     
     // First operation will be SetTurn and second operation will be Set(PreviuosMove)
     //TODO: except in case of end game. handle that case.
@@ -113,7 +113,10 @@ public class PokerLogic {
       return doCheckMove(lastState, playerIds);
     }
     else if (previousMove == PokerMove.CALL) {
-      return doCallMove(lastState, playerIds);
+      int existingBetAmount = lastState.getPlayerBets().get(playerIndex);
+      int newBetAmount =
+          ((List<Integer>) getSetOperationVal(PLAYER_BETS, lastMove)).get(playerIndex);
+      return doCallMove(lastState, playerIds, newBetAmount - existingBetAmount);
     }
     else if (previousMove == PokerMove.BET) {
       int betAmount = 
@@ -156,26 +159,34 @@ public class PokerLogic {
     
     operations.add(new Set(PREVIOUS_MOVE, PokerMove.FOLD.name()));
     
+    operations.add(new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE));
+    
     operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
     
     // Remove player from PLAYERS_IN_HAND
-    List<String> playersInHand = getStrPlayerList(lastState.getPlayersInHand());
+    List<String> playersInHand = helper.getApiPlayerList(lastState.getPlayersInHand());
     List<String> newPlayersInHand = removeFromList(playersInHand, lastState.getWhoseMove().name());
     operations.add(new Set(PLAYERS_IN_HAND, newPlayersInHand));
     
     // Remove player from all pots
     List<Pot> pots = lastState.getPots();
     List<Map<String, Object>> newPots = Lists.newArrayList();
+    boolean isNewPotsRequired = false;
     for(Pot pot : pots) {
-      List<String> playersInPot = getStrPlayerList(pot.getPlayersInPot());
+      List<String> playersInPot = helper.getApiPlayerList(pot.getPlayersInPot());
       List<String> newPlayersInPot = removeFromList(playersInPot, lastState.getWhoseMove().name());
+      if(playersInPot.size() != newPlayersInPot.size()) {
+        isNewPotsRequired = true;
+      }
       newPots.add(ImmutableMap.<String, Object>of(
           CHIPS, pot.getChips(),
           CURRENT_POT_BET, pot.getCurrentPotBet(),
           PLAYERS_IN_POT, newPlayersInPot,
           PLAYER_BETS, pot.getPlayerBets()));
     }
-    operations.add(new Set(POTS, newPots));
+    if(isNewPotsRequired) {
+      operations.add(new Set(POTS, newPots));
+    }
     
     return operations;
   }
@@ -216,7 +227,7 @@ public class PokerLogic {
    * @param lastState
    * @return
    */
-  List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds) {
+  List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds, int additionalAmount) {
     
     if(isGameOverAfterCall(lastState)) {
       return doGameOverAfterCallMove(lastState);
@@ -230,7 +241,14 @@ public class PokerLogic {
     int currentBetAmount = lastState.getPlayerBets().get(playerIndex);
     int requiredBetAmount = calculateLastRequiredBet(lastState);
     int currentPlayerChips = lastState.getPlayerChips().get(playerIndex);
-    boolean isAllIn = (requiredBetAmount == (currentBetAmount + currentPlayerChips));
+    boolean isAllIn = (currentPlayerChips == additionalAmount);
+    
+    if(isAllIn) {
+      check(requiredBetAmount >= currentBetAmount + additionalAmount);
+    }
+    else {
+      check(requiredBetAmount == currentBetAmount + additionalAmount);
+    }
     
     List<Operation> operations = Lists.newArrayList();
     
@@ -246,43 +264,106 @@ public class PokerLogic {
     // PLAYERS_IN_HAND should already contain this player
     
     List<Integer> newPlayerBets = addOrReplaceInList(lastState.getPlayerBets(),
-        Integer.valueOf(requiredBetAmount), playerIndex);
+        Integer.valueOf(currentBetAmount + additionalAmount), playerIndex);
     operations.add(new Set(PLAYER_BETS, newPlayerBets));
     
     List<Integer> newPlayerChips = addOrReplaceInList(lastState.getPlayerChips(),
-        Integer.valueOf(currentPlayerChips - (requiredBetAmount - currentBetAmount)),
-        playerIndex);
+        Integer.valueOf(currentPlayerChips - additionalAmount), playerIndex);
     operations.add(new Set(PLAYER_CHIPS, newPlayerChips));
     
     // Add call amount to all the pots
     List<Pot> pots = lastState.getPots();
     List<Map<String, Object>> newPots = Lists.newArrayList();
-    for(Pot pot : pots) {
-      List<String> playersInPot = getStrPlayerList(pot.getPlayersInPot());
-      List<String> newPlayersInPot = addToList(playersInPot, lastState.getWhoseMove().name());
-      List<Integer> playerPotBets = pot.getPlayerBets();
-      List<Integer> newPlayerPotBets = addOrReplaceInList(playerPotBets,
-          Integer.valueOf(pot.getCurrentPotBet()), playerIndex);
-      newPots.add(ImmutableMap.<String, Object>of(
-          CHIPS, pot.getChips(),
-          CURRENT_POT_BET, pot.getCurrentPotBet(),
-          PLAYERS_IN_POT, newPlayersInPot,
-          PLAYER_BETS, newPlayerPotBets));
+    if(isAllIn) {
+      newPots.addAll(splitPotsForPartialCall(lastState, additionalAmount));
     }
-    if (isAllIn) {
-      Map<String, Object> finalPot = newPots.get(newPots.size() - 1);
-      newPots.add(ImmutableMap.<String, Object>of(
-          CHIPS, 0,
-          CURRENT_POT_BET, 0,
-          PLAYERS_IN_POT, removeFromList(
-              (List<String>)finalPot.get("PLAYERS_IN_POT"), P[playerIndex]),
-          PLAYER_BETS, createNewList(playerIds.size(), Integer.valueOf(0))));
+    else {
+      for(Pot pot : pots) {
+        int existingBet = lastState.getPlayerBets().get(playerIndex);
+        List<String> playersInPot = helper.getApiPlayerList(pot.getPlayersInPot());
+        List<String> newPlayersInPot = addToList(playersInPot, lastState.getWhoseMove().name());
+        List<Integer> playerPotBets = pot.getPlayerBets();
+        List<Integer> newPlayerPotBets = addOrReplaceInList(playerPotBets,
+            Integer.valueOf(pot.getCurrentPotBet()), playerIndex);
+        newPots.add(ImmutableMap.<String, Object>of(
+            CHIPS, pot.getChips() + pot.getCurrentPotBet() - existingBet,
+            CURRENT_POT_BET, pot.getCurrentPotBet(),
+            PLAYERS_IN_POT, newPlayersInPot,
+            PLAYER_BETS, newPlayerPotBets));
+      }
     }
     operations.add(new Set(POTS, newPots));
     
     return operations;
   }
   
+  private List<Map<String, Object>> splitPotsForPartialCall(PokerState lastState,
+      int additionalAmount) {
+    check(calculateLastRequiredBet(lastState) >= additionalAmount, "This is not an all-in call.");
+    int playerIndex = lastState.getWhoseMove().ordinal();
+    List<Pot> pots = lastState.getPots();
+    List<Map<String, Object>> newPots = Lists.newArrayList();
+    int remainingAmount = additionalAmount;
+    boolean potSplitDone = false;
+    for(int i=0; i<pots.size(); i++) {
+      Pot pot = pots.get(i);
+      List<String> playersInPot = helper.getApiPlayerList(pot.getPlayersInPot());
+      int requiredPotBet = pot.getCurrentPotBet();
+      int existingPotBet = pot.getPlayerBets().get(playerIndex);
+      int remainingPotBet = requiredPotBet - existingPotBet;
+      
+      if(!potSplitDone && remainingAmount <= remainingPotBet) {
+        //Need to split this pot.
+        int requiredPotBet1 = existingPotBet + remainingAmount;
+        int requiredPotBet2 = requiredPotBet - (remainingAmount + existingPotBet);
+        List<Integer> newPlayerBets1 = Lists.newArrayList();
+        List<Integer> newPlayerBets2 = Lists.newArrayList();
+        int chips1 = 0;
+        int chips2 = 0;
+        List<Integer> playerBets = addOrReplaceInList(
+            pot.getPlayerBets(), Integer.valueOf(existingPotBet + remainingAmount), playerIndex);
+        for(int playerBet : playerBets) {
+          int playerBet1 = playerBet > requiredPotBet1 ? requiredPotBet1 : playerBet;
+          int playerBet2 = playerBet > requiredPotBet1 ? (playerBet - requiredPotBet) : 0;
+          newPlayerBets1.add(playerBet1);
+          newPlayerBets2.add(playerBet2);
+          chips1 += playerBet1;
+          chips2 += playerBet2;
+        }
+        check(pot.getChips() == chips1 + chips2, "Invalid pot split.");
+        newPots.add(ImmutableMap.<String, Object>of(
+            CHIPS, chips1,
+            CURRENT_POT_BET, requiredPotBet1,
+            PLAYERS_IN_POT, playersInPot,
+            PLAYER_BETS, newPlayerBets1));
+        newPots.add(ImmutableMap.<String, Object>of(
+            CHIPS, chips2,
+            CURRENT_POT_BET, requiredPotBet2,
+            PLAYERS_IN_POT, removeFromList(playersInPot, P[playerIndex]),
+            PLAYER_BETS, newPlayerBets2));
+      }
+      else {
+        if(potSplitDone) {
+          newPots.add(ImmutableMap.<String, Object>of(
+              CHIPS, pot.getChips(),
+              CURRENT_POT_BET, pot.getCurrentPotBet(),
+              PLAYERS_IN_POT, removeFromList(playersInPot, P[playerIndex]),
+              PLAYER_BETS, pot.getPlayerBets()));
+        }
+        else {
+          newPots.add(ImmutableMap.<String, Object>of(
+              CHIPS, pot.getChips() + remainingPotBet,
+              CURRENT_POT_BET, requiredPotBet,
+              PLAYERS_IN_POT, playersInPot,
+              PLAYER_BETS, addOrReplaceInList(pot.getPlayerBets(),
+                  Integer.valueOf(requiredPotBet), playerIndex)));
+          remainingAmount -= remainingPotBet;
+        }
+      }
+    }
+    return newPots;
+  }
+
   /**
    * Generates List of Operation objects for performing
    * a Bet move by the current player.
@@ -333,7 +414,7 @@ public class PokerLogic {
       newPots.add(getApiPot(pots.get(i)));
     }
     Pot finalPot = pots.get(pots.size() - 1);
-    List<String> playersInFinalPot = getStrPlayerList(finalPot.getPlayersInPot());
+    List<String> playersInFinalPot = helper.getApiPlayerList(finalPot.getPlayersInPot());
     List<Integer> playerBetsInFinalPot = finalPot.getPlayerBets();
     List<Integer> newPlayerBetsInFinalPot = addOrReplaceInList(playerBetsInFinalPot,
           Integer.valueOf(betAmount), playerIndex);
@@ -376,7 +457,7 @@ public class PokerLogic {
     check(existingPlayerBet + additionalAmount <= playerChips,
         "Cannot raise more than existing chips.");
     boolean isAllIn = ((existingPlayerBet + additionalAmount) == playerChips);
-    check(isAllIn || raiseByAmount >= 2*totalRequiredBet,
+    check(isAllIn || raiseByAmount >= totalRequiredBet,
         "Raise must be atleast twice existing bet.");
     
     // In Raise move existing bet should be non-zero, otherwise it'll be a bet
@@ -422,7 +503,8 @@ public class PokerLogic {
         newPots.add(ImmutableMap.<String, Object>of(
             CHIPS, pot.getChips() + (requiredPotBet - existingPotBet),
             CURRENT_POT_BET, pot.getCurrentPotBet(),
-            PLAYERS_IN_POT, addToList(getStrPlayerList(pot.getPlayersInPot()), P[playerIndex]),
+            PLAYERS_IN_POT, addToList(helper.getApiPlayerList(pot.getPlayersInPot()), 
+                P[playerIndex]),
             PLAYER_BETS, newPlayerBetsInPot));
       }
       else {
@@ -435,7 +517,7 @@ public class PokerLogic {
         newPots.add(ImmutableMap.<String, Object>of(
             CHIPS, finalPot.getChips() + (requiredPotBet - existingPlayerBet) + raiseByAmount,
             CURRENT_POT_BET, requiredPotBet + raiseByAmount,
-            PLAYERS_IN_POT, addToList(getStrPlayerList(finalPot.getPlayersInPot()), P[playerIndex]),
+            PLAYERS_IN_POT, addToList(helper.getApiPlayerList(finalPot.getPlayersInPot()), P[playerIndex]),
             PLAYER_BETS, newPlayerBetsInFinalPot));
       }
       if(isAllIn) {
@@ -444,14 +526,21 @@ public class PokerLogic {
             CHIPS, 0,
             CURRENT_POT_BET, 0,
             PLAYERS_IN_POT, removeFromList(
-                (List<String>)finalPot.get("PLAYERS_IN_POT"), P[playerIndex]),
+                (List<String>)finalPot.get(PLAYERS_IN_POT), P[playerIndex]),
             PLAYER_BETS, createNewList(playerIds.size(), Integer.valueOf(0))));
       }
     }
+    operations.add(new Set(POTS, newPots));
+    
     return operations;
   }
  
   private boolean isGameOverAfterCall(PokerState lastState) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  private boolean isGameOverAfterFold(PokerState lastState) {
     // TODO Auto-generated method stub
     return false;
   }
@@ -460,31 +549,7 @@ public class PokerLogic {
     // TODO Auto-generated method stub
     return null;
   }
-
-  private List<Operation> doGameOverAfterFold(PokerState lastState) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  private boolean isGameOverAfterFold(PokerState lastState) {
-    // TODO Auto-generated method stub
-    return false;
-  }
   
-  private List<Operation> doNewRoundAfterCallMove(PokerState lastState) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  private List<Operation> doGameOverAfterCallMove(PokerState lastState) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-
-
-
-
   /**
    * Generates List of Operation objects for performing
    * a Check move by the current player and starting a new round.
@@ -538,6 +603,21 @@ public class PokerLogic {
     return operations;
   }
 
+  private List<Operation> doNewRoundAfterCallMove(PokerState lastState) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  private List<Operation> doGameOverAfterFold(PokerState lastState) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  private List<Operation> doGameOverAfterCallMove(PokerState lastState) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
   private boolean isNewRoundStarting(PokerState lastState,
       PokerMove previousMove) {
     if (previousMove == PokerMove.BET || previousMove == PokerMove.RAISE) {
@@ -567,6 +647,7 @@ public class PokerLogic {
         // This player is all-in. Continue to next player
         continue;
       }
+      break;
     }
     
     // Special case for pre-flop bigblind bet. The round goes on to big blind
@@ -578,15 +659,6 @@ public class PokerLogic {
     }
     
     return isNewRoundStarting;
-  }
-
-  private boolean isAllInHigherThanCall(PokerState lastState) {
-    int whoseTurnIndex = lastState.getWhoseMove().ordinal();
-    int toCallAmount = calculateLastRequiredBet(lastState) - 
-        lastState.getPlayerBets().get(whoseTurnIndex);
-    int lastMoveAmount = lastState.getPlayerChips().get(whoseTurnIndex);
-    
-    return (lastMoveAmount > toCallAmount);
   }
 
   public List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
@@ -692,15 +764,6 @@ public class PokerLogic {
     return operations;
   }
   
-  private boolean determineAllInMove(PokerState lastState, int amount) {
-    int playerIndex = lastState.getWhoseMove().ordinal();
-    ImmutableList<Integer> playerChips = lastState.getPlayerChips();
-    if (amount > playerChips.get(playerIndex)){
-      return true;
-    }
-    return false;
-  }
-  
   private int calculateLastRequiredBet(PokerState lastState) {
     List<Pot> pots = lastState.getPots();
     int totalRequiredBet = 0;
@@ -714,7 +777,7 @@ public class PokerLogic {
     return ImmutableMap.<String, Object>of(
         CHIPS, pot.getChips(),
         CURRENT_POT_BET, pot.getCurrentPotBet(),
-        PLAYERS_IN_HAND, getStrPlayerList(pot.getPlayersInPot()),
+        PLAYERS_IN_HAND, helper.getApiPlayerList(pot.getPlayersInPot()),
         PLAYER_BETS, pot.getPlayerBets());
   }
   
@@ -755,7 +818,7 @@ public class PokerLogic {
       //replace some element (not last)
       return ImmutableList.<T>builder().
           addAll(list.subList(0, index)).add(obj).
-          addAll(list.subList(index+1, list.size() - 1)).build();
+          addAll(list.subList(index+1, list.size())).build();
     }
     else {
       throw new IllegalArgumentException("Invalid index " + index);
@@ -765,7 +828,7 @@ public class PokerLogic {
   private <T> ImmutableList<T> removeFromList(List<T> list, T obj) {
     int index = list.indexOf(obj);
     if(index == -1) {
-      throw new IllegalArgumentException("Object not found in list");
+      return ImmutableList.copyOf(list);
     }
     return removeFromList(list, index);
   }
@@ -779,7 +842,7 @@ public class PokerLogic {
       //replace some element (not last)
       return ImmutableList.<T>builder().
           addAll(list.subList(0, index)).
-          addAll(list.subList(index+1, list.size() - 1)).build();
+          addAll(list.subList(index + 1, list.size())).build();
     }
     else {
       throw new IllegalArgumentException("Invalid index " + index);
@@ -802,7 +865,7 @@ public class PokerLogic {
         // This player is all-in. Continue to next player
         continue;
       }
-      return listIndex;
+      return playersInHand.get(listIndex).ordinal();
     }
     // Code should never reach here if our assumptino was correct
     throw new IllegalStateException("Next turn not found");
@@ -827,24 +890,16 @@ public class PokerLogic {
       newPots.add(0, ImmutableMap.<String, Object>of(
           CHIPS, pot.getChips() + chipsToAdd,
           CURRENT_POT_BET, pot.getCurrentPotBet(),
-          PLAYERS_IN_POT, getStrPlayerList(pot.getPlayersInPot())));
+          PLAYERS_IN_POT, helper.getApiPlayerList(pot.getPlayersInPot())));
     }
     for(; i >= 0; i--) {
       Pot pot = pots.get(i);
       newPots.add(0, ImmutableMap.<String, Object>of(
           CHIPS, pot.getChips(),
           CURRENT_POT_BET, pot.getCurrentPotBet(),
-          PLAYERS_IN_POT, getStrPlayerList(pot.getPlayersInPot())));
+          PLAYERS_IN_POT, helper.getApiPlayerList(pot.getPlayersInPot())));
     }
     return newPots;
-  }
-  
-  private List<String> getStrPlayerList(List<Player> players) {
-    ImmutableList.Builder<String> playerListBuilder = ImmutableList.builder();
-    for(Player player : players) {
-      playerListBuilder.add(player.name());
-    }
-    return playerListBuilder.build();
   }
   
   private boolean isBigBlindMove(PokerState state) {
@@ -937,14 +992,6 @@ public class PokerLogic {
     return value;
   }
   
-  private PokerState gameApiStateToPokerState(Map<String, Object> gameApiState, Player whoseMove) {
-    
-    
-    
-    //TODO
-    return null;
-  }
-  
   // Following utility methods have been copied from CheatLogic.java
   // in project https://github.com/yoav-zibin/cheat-game
   
@@ -979,5 +1026,5 @@ public class PokerLogic {
           + Arrays.toString(debugArguments));
     }
   }
-
+  
 }

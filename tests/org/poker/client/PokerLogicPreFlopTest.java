@@ -29,7 +29,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
           put(WHOSE_MOVE, P[0]).
           put(CURRENT_BETTER, P[3]).
           put(CURRENT_ROUND, BettingRound.PRE_FLOP.name()).
-          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3])).
+          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])).
           put(HOLE_CARDS, ImmutableList.of(
               ImmutableList.of(0, 1), ImmutableList.of(2, 3),
               ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
@@ -48,7 +48,8 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
           new SetTurn(p1_id),
           new Set(PREVIOUS_MOVE, PokerMove.FOLD.name()),
           new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE),
-          new Set(WHOSE_MOVE, P[1]));
+          new Set(WHOSE_MOVE, P[1]),
+          new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3])));
   
   protected ImmutableList<Operation> getPreFlopFourPlayerDealerRaise(
       PokerMove move, int raiseByAmount) {
@@ -67,7 +68,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
       pots.add(ImmutableMap.<String, Object>of(
           CHIPS, 0,
           CURRENT_POT_BET, 0,
-          PLAYERS_IN_POT, ImmutableList.of(),
+          PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3]),
           PLAYER_BETS, ImmutableList.of(0, 0, 0, 0)));
     }
     ImmutableList.Builder<Operation> listBuilder = ImmutableList.<Operation>builder();
@@ -79,7 +80,6 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     if (move == PokerMove.BET || move == PokerMove.RAISE) {
       listBuilder.add(new Set(CURRENT_BETTER, P[0]));
     }
-    listBuilder.add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])));
     listBuilder.add(new Set(PLAYER_BETS, ImmutableList.of(600 + raiseByAmount, 100, 200, 600)));
     listBuilder.add(new Set(PLAYER_CHIPS,
         ImmutableList.of(2000 - 600 - raiseByAmount, 1900, 1800, 1400)));
@@ -101,7 +101,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
           put(WHOSE_MOVE, P[3]).
           put(CURRENT_BETTER, P[2]).
           put(CURRENT_ROUND, BettingRound.PRE_FLOP.name()).
-          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2])).
+          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])).
           put(HOLE_CARDS, ImmutableList.of(
               ImmutableList.of(0, 1), ImmutableList.of(2, 3),
               ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
@@ -212,7 +212,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     // P0 folds, but marks all community cards as visible to all
     ImmutableList<Operation> attemptToviewBoard = ImmutableList.<Operation>of(
         new SetTurn(p1_id),
-        new Set(PREVIOUS_MOVE, PokerMove.CHECK),
+        new Set(PREVIOUS_MOVE, PokerMove.CHECK.name()),
         new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE),
         new Set(WHOSE_MOVE, P[1]),
         new SetVisibility(C + 8, ImmutableList.of(p0_id)),
@@ -230,7 +230,7 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     // P3 marks next turn as P1 instead of P0
     ImmutableList<Operation> attemptToSkipMove = ImmutableList.<Operation>of(
         new SetTurn(p1_id),
-        new Set(PREVIOUS_MOVE, PokerMove.CHECK),
+        new Set(PREVIOUS_MOVE, PokerMove.CHECK.name()),
         new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE),
         new Set(WHOSE_MOVE, P[1]));
     VerifyMove verifyMove = move(p3_id, preFlopFourPlayerFirstMoveState,
