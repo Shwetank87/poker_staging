@@ -10,6 +10,7 @@ import java.util.Map;
 import org.poker.client.Card.Rank;
 import org.poker.client.Card.Suit;
 import org.poker.client.GameApi.AttemptChangeTokens;
+import org.poker.client.GameApi.EndGame;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
 import org.poker.client.GameApi.SetTurn;
@@ -101,6 +102,16 @@ public class PokerLogic {
     
     PokerState lastState = helper.gameApiStateToPokerState(lastApiState);
     
+    boolean isEndGame = false;
+    for(Operation operation : lastMove) {
+      if(operation instanceof EndGame) {
+        isEndGame = true;
+      }
+    }
+    if(isEndGame) {
+      return doEndGameMove(lastState, playerIds);
+    }
+    
     // First operation will be SetTurn and second operation will be Set(PreviuosMove)
     //TODO: except in case of end game. handle that case.
     PokerMove previousMove = PokerMove.valueOf((String)((Set)lastMove.get(1)).getValue());
@@ -134,6 +145,64 @@ public class PokerLogic {
     throw new IllegalStateException("No Expected move can be found");
   }
   
+  /**
+   * Returns operation list for end game scenario.<Br>
+   * Divides the money in all the pots amongst the 
+   * winners of those respective pots.
+   * 
+   * @param lastState
+   * @param playerIds
+   * @return
+   */
+  private List<Operation> doEndGameMove(PokerState lastState, List<Integer> playerIds) {
+    
+    List<List<Integer>> winnersForEachPot = helper.getWinners(lastState, playerIds);
+    
+    List<Integer> winnings = Lists.newArrayList();
+    winnings.addAll(lastState.getPlayerChips());
+    
+    ImmutableMap.Builder<Integer, Integer> endGameMapBuilder = ImmutableMap.builder();
+    
+    for (int potIndex = 0; potIndex < winnersForEachPot.size(); potIndex++) {
+      List<Integer> winnersForPot = winnersForEachPot.get(potIndex);
+      int potAmount = lastState.getPots().get(potIndex).getChips();
+      int numberOfWinners = winnersForPot.size();
+      for(int winnerIndex = 0; winnerIndex < numberOfWinners; winnerIndex++) {
+        int winningShare;
+        if(winnerIndex == numberOfWinners - 1) {
+          //handle remaining change
+          winningShare = potAmount - (numberOfWinners - 1) * (potAmount / numberOfWinners);
+        }
+        else {
+          winningShare = potAmount / numberOfWinners;
+        }
+        int winnerPlayerIndex = playerIds.indexOf(winnersForPot.get(winnerIndex));
+        winnings.set(winnerPlayerIndex, winnings.get(winnerPlayerIndex) + winningShare);
+      }
+    }
+    
+    for (int i = 0; i < playerIds.size(); i++) {
+      if(winnersForEachPot.get(winnersForEachPot.size() - 1).contains(playerIds.get(i))) {
+        endGameMapBuilder.put(playerIds.get(i), 1);
+      }
+      else {
+        endGameMapBuilder.put(playerIds.get(i), 0);
+      }
+    }
+    
+    ImmutableMap.Builder<Integer, Integer> playerIdToTokensBuilder = ImmutableMap.builder();
+    ImmutableMap.Builder<Integer, Integer> playerIdToPotTokensBuilder = ImmutableMap.builder();
+    for(int i = 0; i < winnings.size(); i++) {
+      playerIdToTokensBuilder.put(playerIds.get(i), winnings.get(i));
+      playerIdToPotTokensBuilder.put(playerIds.get(i), 0);
+    }
+    return ImmutableList.<Operation>of(
+        new AttemptChangeTokens(
+            playerIdToTokensBuilder.build(),
+            playerIdToPotTokensBuilder.build()),
+        new EndGame(endGameMapBuilder.build()));
+  }
+
   /**
    * Generates List of Operation objects for performing
    * a Fold move by the current player.
@@ -590,7 +659,8 @@ public class PokerLogic {
     boolean noPlayersLeft = isGameOverAfterMove(lastState, PokerMove.FOLD);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
     //If game is ending, next turn will be set to the same player
-    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNextTurnIndex(lastState);
+    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNewRoundNextTurnIndex(
+        lastState, PokerMove.FOLD);
     if(noPlayersLeft) {
       nextRound = BettingRound.SHOWDOWN;
     }
@@ -670,7 +740,8 @@ public class PokerLogic {
     boolean noPlayersLeft = isGameOverAfterMove(lastState, PokerMove.CHECK);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
     //If game is ending, next turn will be set to the same player
-    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNextTurnIndex(lastState);
+    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNewRoundNextTurnIndex(
+        lastState, PokerMove.CHECK);
     int numberOfPlayers = lastState.getNumberOfPlayers();
     if(noPlayersLeft) {
       nextRound = BettingRound.SHOWDOWN;
@@ -732,7 +803,8 @@ public class PokerLogic {
     boolean noPlayersLeft = isGameOverAfterMove(lastState, PokerMove.CALL);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
     //If game is ending, next turn will be set to the same player
-    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNextTurnIndex(lastState);
+    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNewRoundNextTurnIndex(
+        lastState, PokerMove.CALL);
     boolean isAllIn = (currentPlayerChips == additionalAmount);
     if(noPlayersLeft) {
       nextRound = BettingRound.SHOWDOWN;
@@ -1067,6 +1139,36 @@ public class PokerLogic {
     throw new IllegalStateException("Next turn not found");
   }
   
+  /**
+   * This method gets the index of the next player to act in the new round.
+   * The checking starts from the smallBlind and all-in Players are skipped. 
+   * It assumes that at least one non-allIn player is in the hand.
+   * 
+   * @param state Last PokerState
+   * @return index of next player to act
+   */
+  private int getNewRoundNextTurnIndex(PokerState lastState, PokerMove move) {
+    
+    List<Player> playersInHand;
+    if(move == PokerMove.FOLD) {
+      playersInHand = removeFromList(lastState.getPlayersInHand(), lastState.getWhoseMove());
+    }
+    else {
+      playersInHand = lastState.getPlayersInHand();
+    }
+    int numberOfPlayers = lastState.getNumberOfPlayers();
+    
+    // Start from P1, which is player after the dealer
+    for(int nextTurnIndex = 1; nextTurnIndex < numberOfPlayers; nextTurnIndex++) {
+      if(playersInHand.contains(Player.values()[nextTurnIndex])) {
+        if(lastState.getPlayerChips().get(nextTurnIndex) > 0) {
+          // Found not allIn player still in the hand
+          return nextTurnIndex;
+        }
+      }
+    }
+    throw new IllegalStateException("Not all-in player in hand not found.");
+  }
   
   private List<Map<String, Object>> addChipsInPots(List<Pot> pots, Player player, int chips) {
     List<Map<String, Object>> newPots = Lists.newArrayList();

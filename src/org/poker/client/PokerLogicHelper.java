@@ -125,5 +125,10 @@ public class PokerLogicHelper {
     }
     return playerListBuilder.build();
   }
+
+  public List<List<Integer>> getWinners(PokerState lastState, List<Integer> playerIds) {
+    // TODO Auto-generated method stub
+    return null;
+  }
   
 }
