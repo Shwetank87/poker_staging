@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -149,7 +150,7 @@ public class PokerLogic {
     }
     
     if (isNewRoundStarting(lastState, PokerMove.FOLD)) {
-      return doNewRoundAfterFoldMove();
+      return doNewRoundAfterFoldMove(lastState);
     }
     
     List<Operation> operations = Lists.newArrayList();
@@ -200,8 +201,10 @@ public class PokerLogic {
    * @return
    */
   List<Operation> doCheckMove(PokerState lastState, List<Integer> playerIds) {
-    
+    //TODO : game end after check move?
+    boolean isEndGame = isGameOverAfterMove(lastState, PokerMove.CHECK);
     boolean isNewRoundStarting = isNewRoundStarting(lastState, PokerMove.CHECK);
+    
     if (isNewRoundStarting) {
       return doNewRoundAfterCheckMove(lastState , playerIds);
     }
@@ -229,12 +232,12 @@ public class PokerLogic {
    */
   List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds, int additionalAmount) {
     
-    if(isGameOverAfterCall(lastState)) {
-      return doGameOverAfterCallMove(lastState);
+    if(isGameOverAfterMove(lastState, PokerMove.CALL)) {
+      return doGameOverAfterCallMove(lastState, additionalAmount);
     }
     
     if (isNewRoundStarting(lastState, PokerMove.CALL)) {
-      return doNewRoundAfterCallMove(lastState);
+      return doNewRoundAfterCallMove(lastState, additionalAmount);
     }
     
     int playerIndex = lastState.getWhoseMove().ordinal();
@@ -275,7 +278,7 @@ public class PokerLogic {
     List<Pot> pots = lastState.getPots();
     List<Map<String, Object>> newPots = Lists.newArrayList();
     if(isAllIn) {
-      newPots.addAll(splitPotsForPartialCall(lastState, additionalAmount));
+      newPots.addAll(splitPotsForPartialCall(lastState, additionalAmount, false));
     }
     else {
       for(Pot pot : pots) {
@@ -297,7 +300,28 @@ public class PokerLogic {
     return operations;
   }
   
-  private List<Map<String, Object>> splitPotsForPartialCall(PokerState lastState,
+  private List<Map<String, Object>> splitPotsForPartialCall(PokerState lastState, 
+      int additionalAmount, boolean isNewRoundStarting) {
+    List<Map<String, Object>> pots = splitPotsForPartialCallHelper(lastState, additionalAmount);
+    
+    
+    if(isNewRoundStarting){
+      List<Map<String, Object>> newPots = Lists.newArrayList();
+      for( Map<String, Object> pot : pots){
+        Map<String, Object> newPot = ImmutableMap.<String, Object>of(
+            CHIPS, pot.get(CHIPS),
+            CURRENT_POT_BET, 0,
+            PLAYERS_IN_POT, pot.get(PLAYERS_IN_POT),
+            PLAYER_BETS, createNewList(lastState.getNumberOfPlayers(), 0)
+            );
+       newPots.add(newPot); 
+      }
+      return newPots;
+    }
+    
+    return pots;
+  }
+  private List<Map<String, Object>> splitPotsForPartialCallHelper(PokerState lastState,
       int additionalAmount) {
     check(calculateLastRequiredBet(lastState) >= additionalAmount, "This is not an all-in call.");
     int playerIndex = lastState.getWhoseMove().ordinal();
@@ -361,6 +385,7 @@ public class PokerLogic {
         }
       }
     }
+    
     return newPots;
   }
 
@@ -535,19 +560,62 @@ public class PokerLogic {
     return operations;
   }
  
-  private boolean isGameOverAfterCall(PokerState lastState) {
+  private boolean isGameOverAfterMove(PokerState lastState, PokerMove move) {
     // TODO Auto-generated method stub
-    return false;
-  }
-
-  private boolean isGameOverAfterFold(PokerState lastState) {
-    // TODO Auto-generated method stub
+    boolean isNewRoundStarting = isNewRoundStarting(lastState, move);
+    if (isNewRoundStarting) {
+      return BettingRound.RIVER == lastState.getCurrentRound() ? true : false;
+    }
     return false;
   }
   
-  private List<Operation> doNewRoundAfterFoldMove() {
-    // TODO Auto-generated method stub
-    return null;
+  private List<Operation> doNewRoundAfterFoldMove(PokerState lastState) {
+    int numOfPlayers = lastState.getNumberOfPlayers();
+    int playerIndex = lastState.getWhoseMove().ordinal();
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    BettingRound newRound = lastState.getCurrentRound().getNextRound();
+    
+    List<Operation> operations = new ArrayList<Operation>();
+    
+    // Set previous move
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.FOLD.name()));
+    
+    // Set previous move All In to false
+    operations.add(new Set(PREVIOUS_MOVE_ALL_IN, false));
+    
+    // Set next turn
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    // Increment the current round
+    operations.add(new Set(CURRENT_ROUND, newRound ));
+    
+    // Open the board cards
+    operations.addAll(openNewCommunityCards(lastState));
+    
+    // Remove the current player from players in Hand
+    List<Player> newPlayerInHand = removeFromList(lastState.getPlayersInHand(),Player.valueOf(P[playerIndex]));
+    operations.add(new Set(PLAYERS_IN_HAND, newPlayerInHand));
+    
+    // Set PlayerBets to 0
+    List<Integer> newPlayerBets = createNewList(numOfPlayers, 0);
+    operations.add(new Set(PLAYER_BETS, newPlayerBets));
+    
+    // Remove player from pots and set pot bets to 0
+    List<Pot> pots = lastState.getPots();
+    List<Map<String, Object>> newPots = Lists.newArrayList();
+    for(Pot pot : pots) {
+      List<String> playersInPot = helper.getApiPlayerList(pot.getPlayersInPot());
+      List<String> newPlayersInPot = removeFromList(playersInPot, lastState.getWhoseMove().name());
+      newPots.add(ImmutableMap.<String, Object>of(
+          CHIPS, pot.getChips(),
+          CURRENT_POT_BET, 0,
+          PLAYERS_IN_POT, newPlayersInPot,
+          PLAYER_BETS, createNewList(numOfPlayers, 0)));
+    }
+    
+    operations.add(new Set(POTS, newPots));
+    
+    return operations;
   }
   
   /**
@@ -603,8 +671,73 @@ public class PokerLogic {
     return operations;
   }
 
-  private List<Operation> doNewRoundAfterCallMove(PokerState lastState) {
-    // TODO Auto-generated method stub
+  private List<Operation> doNewRoundAfterCallMove(PokerState lastState, int additionalAmount) {
+    int numOfPlayers = lastState.getNumberOfPlayers();
+    int playerIndex = lastState.getWhoseMove().ordinal();
+    int currentBetAmount = lastState.getPlayerBets().get(playerIndex);
+    int requiredBetAmount = calculateLastRequiredBet(lastState);
+    int currentPlayerChips = lastState.getPlayerChips().get(playerIndex);
+    int nextTurnIndex = getNextTurnIndex(lastState);
+    BettingRound newRound = lastState.getCurrentRound().getNextRound();
+    boolean isAllIn = (currentPlayerChips == additionalAmount);
+    
+    // Required all in checks
+    if(isAllIn) {
+      check(requiredBetAmount >= currentBetAmount + additionalAmount);
+    }
+    else {
+      check(requiredBetAmount == currentBetAmount + additionalAmount);
+    }
+    
+    List<Operation> operations = new ArrayList<Operation>();
+    
+    // Set previous move
+    operations.add(new Set(PREVIOUS_MOVE, PokerMove.CALL.name()));
+    
+    // Set if this move is all in
+    operations.add(new Set(PREVIOUS_MOVE_ALL_IN, isAllIn));
+    
+    // Set next turn
+    operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
+    
+    // Increment the current round
+    operations.add(new Set(CURRENT_ROUND, newRound ));
+    
+    // Open the board cards
+    operations.addAll(openNewCommunityCards(lastState));
+    
+    // Set PlayerBets to 0
+    List<Integer> newPlayerBets = createNewList(numOfPlayers, 0);
+    operations.add(new Set(PLAYER_BETS, newPlayerBets));
+    
+    // Set Player Chips
+    List<Integer> oldPlayerChips = lastState.getPlayerChips(); 
+    List<Integer> newPlayerChips = addOrReplaceInList(oldPlayerChips, 
+        oldPlayerChips.get(playerIndex) - additionalAmount, playerIndex);
+    operations.add(new Set(PLAYER_CHIPS, newPlayerChips));
+    
+    // Set Pots
+    List<Pot> pots = lastState.getPots();
+    List<Map<String, Object>> newPots = Lists.newArrayList();
+    if(isAllIn) {
+      newPots.addAll(splitPotsForPartialCall(lastState, additionalAmount, true));
+    }
+    else {
+      for(Pot pot : pots) {
+        int existingBet = lastState.getPlayerBets().get(playerIndex);
+        List<String> playersInPot = helper.getApiPlayerList(pot.getPlayersInPot());
+        List<String> newPlayersInPot = addToList(playersInPot, lastState.getWhoseMove().name());
+        List<Integer> playerPotBets = pot.getPlayerBets();
+        List<Integer> newPlayerPotBets = createNewList(numOfPlayers, 0);
+        newPots.add(ImmutableMap.<String, Object>of(
+            CHIPS, pot.getChips() + pot.getCurrentPotBet() - existingBet,
+            CURRENT_POT_BET, 0,
+            PLAYERS_IN_POT, newPlayersInPot,
+            PLAYER_BETS, newPlayerPotBets));
+      }
+    }
+    operations.add(new Set(POTS, newPots));
+    
     return null;
   }
 
@@ -613,7 +746,7 @@ public class PokerLogic {
     return null;
   }
 
-  private List<Operation> doGameOverAfterCallMove(PokerState lastState) {
+  private List<Operation> doGameOverAfterCallMove(PokerState lastState, int additionalAmount) {
     // TODO Auto-generated method stub
     return null;
   }
@@ -685,7 +818,11 @@ public class PokerLogic {
     
     operations.add(new Set(PREVIOUS_MOVE, PokerMove.RAISE.name()));
     
-    operations.add(new Set(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE)); //TODO: check if BB is all-in
+    boolean bigBlindAllIn = false;
+    if(startingChips.get(playerIds.get(bigBlindPos)) == BIG_BLIND) {
+      bigBlindAllIn = true;
+    }
+    operations.add(new Set(PREVIOUS_MOVE_ALL_IN, bigBlindAllIn));
     
     //operations.add(new Set())
     operations.add(new Set(NUMBER_OF_PLAYERS, numberOfPlayers));
