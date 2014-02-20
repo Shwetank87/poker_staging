@@ -36,6 +36,13 @@ public class BestHandFinder {
     return bestHand;
   }
   
+  /**
+   * Recursively iterates over all the hand combinations,
+   * and finds and saves the best hand.
+   * 
+   * @param depth
+   * @param num
+   */
   private void testCombinations(int depth, int num) {
     if(depth == 5) {
       PokerHand pokerHand = new PokerHand(hand);

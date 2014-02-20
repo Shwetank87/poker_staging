@@ -1,12 +1,11 @@
 package org.poker.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.poker.client.Card.*;
+import org.poker.client.Card.Rank;
+import org.poker.client.Card.Suit;
 import org.poker.client.util.BestHandFinder;
 import org.poker.client.util.PokerHand;
 
@@ -45,6 +44,12 @@ public class PokerLogicHelper {
     return instance;
   }
   
+  /**
+   * Converts JSON state object into PokerState POJO
+   * 
+   * @param gameApiState
+   * @return
+   */
   public PokerState gameApiStateToPokerState(Map<String, Object> gameApiState) {
 
     PokerMove previousMove = PokerMove.valueOf((String)gameApiState.get(PREVIOUS_MOVE));
@@ -72,8 +77,12 @@ public class PokerLogicHelper {
     ImmutableList<Optional<Card>> cards = ImmutableList.copyOf(cardList);
 
     // Get Board
-    List<Optional<Integer>> boardElements = (List<Optional<Integer>>) gameApiState.get(BOARD);
-    ImmutableList<Optional<Integer>> board = ImmutableList.copyOf(boardElements);
+    List<Integer> boardElements = (List<Integer>) gameApiState.get(BOARD);
+    List<Optional<Integer>> boardElementsOptional = Lists.newArrayList();
+    for(Integer boardElement : boardElements) {
+      boardElementsOptional.add(Optional.fromNullable(boardElement));
+    }
+    ImmutableList<Optional<Integer>> board = ImmutableList.copyOf(boardElementsOptional);
 
     // Get Players in Hand
     List<String> playerInHandList = (List<String>) gameApiState.get(PLAYERS_IN_HAND);
@@ -84,8 +93,18 @@ public class PokerLogicHelper {
     ImmutableList<Player> playersInHand = ImmutableList.copyOf(temp);
 
     // Get holeCards
-    List<ImmutableList<Optional<Integer>>> holecards = (List<ImmutableList<Optional<Integer>>>) gameApiState.get(HOLE_CARDS);
-    ImmutableList<ImmutableList<Optional<Integer>>> holeCards = ImmutableList.copyOf(holecards);
+    List<List<Integer>> holeCardList = (List<List<Integer>>)gameApiState.get(HOLE_CARDS);
+    ImmutableList.Builder<ImmutableList<Optional<Integer>>> holeCardListBuilder = 
+        ImmutableList.builder();
+    for(List<Integer> holeCards : holeCardList) {
+      ImmutableList.Builder<Optional<Integer>> holeCardsOptionalBuilder =
+          ImmutableList.builder();
+      for(Integer holeCard : holeCards) {
+        holeCardsOptionalBuilder.add(Optional.fromNullable(holeCard));
+      }
+      holeCardListBuilder.add(holeCardsOptionalBuilder.build());
+    }
+    ImmutableList<ImmutableList<Optional<Integer>>> holeCards = holeCardListBuilder.build();
 
     // Get playerBets
     List<Integer> bets = (List<Integer>)gameApiState.get(PLAYER_BETS);
@@ -115,6 +134,12 @@ public class PokerLogicHelper {
         playerBets, playerChips, pots);
   }
 
+  /**
+   * Get JSON players list from POJO player list
+   * 
+   * @param players
+   * @return
+   */
   public List<String> getApiPlayerList(List<Player> players) {
     ImmutableList.Builder<String> playerListBuilder = ImmutableList.builder();
     for(Player player : players) {
@@ -131,6 +156,13 @@ public class PokerLogicHelper {
     return playerListBuilder.build();
   }
 
+  /**
+   * Returns the list of player IDs of players winning each pot.
+   * 
+   * @param lastState
+   * @param playerIds
+   * @return
+   */
   public List<List<Integer>> getWinners(PokerState lastState, List<Integer> playerIds) {
     
     List<Player> playersInHand = lastState.getPlayersInHand();
@@ -144,7 +176,7 @@ public class PokerLogicHelper {
           board.add(lastState.getCards().get(boardCard.get()).get());
         }
         for(Optional<Integer> holeCard : lastState.getHoleCards().get(i)) {
-          board.add(lastState.getCards().get(holeCard.get()).get());
+          holeCards.add(lastState.getCards().get(holeCard.get()).get());
         }
         bestHands.add(new BestHandFinder(board, holeCards).find());
       }

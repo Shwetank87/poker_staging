@@ -54,7 +54,7 @@ public class PokerLogic {
       checkMoveIsLegal(verifyMove);
       return new VerifyMoveDone();
     } catch (Exception e) {
-      e.printStackTrace();
+      //e.printStackTrace();
       return new VerifyMoveDone(verifyMove.getLastMovePlayerId(), e.getMessage());
     }
   }
@@ -69,7 +69,7 @@ public class PokerLogic {
     // first MakeMove we'll send SetTurn which will guarantee the correct player send MakeMove).
     if (verifyMove.getLastState().isEmpty()) {
       if(!(lastMove.get(0) instanceof AttemptChangeTokens)) {
-        check(verifyMove.getLastMovePlayerId() == verifyMove.getPlayerIds().get(0));
+        check(verifyMove.getLastMovePlayerId() == verifyMove.getPlayerIds().get(0), "Wrong player");
       }
     }
   }
@@ -113,7 +113,6 @@ public class PokerLogic {
     }
     
     // First operation will be SetTurn and second operation will be Set(PreviuosMove)
-    //TODO: except in case of end game. handle that case.
     PokerMove previousMove = PokerMove.valueOf((String)((Set)lastMove.get(1)).getValue());
     int playerIndex = lastState.getWhoseMove().ordinal();
     
@@ -125,9 +124,9 @@ public class PokerLogic {
     }
     else if (previousMove == PokerMove.CALL) {
       int existingBetAmount = lastState.getPlayerBets().get(playerIndex);
-      int newBetAmount =
-          ((List<Integer>) getSetOperationVal(PLAYER_BETS, lastMove)).get(playerIndex);
-      return doCallMove(lastState, playerIds, newBetAmount - existingBetAmount);
+      int additionalAmount = lastState.getPlayerChips().get(playerIndex) -
+          ((List<Integer>) getSetOperationVal(PLAYER_CHIPS, lastMove)).get(playerIndex);
+      return doCallMove(lastState, playerIds, additionalAmount);
     }
     else if (previousMove == PokerMove.BET) {
       int betAmount = 
@@ -357,6 +356,15 @@ public class PokerLogic {
     return operations;
   }
   
+  /**
+   * Splits the pot for all-in call move, and resets the pots
+   * for a new round if required.
+   * 
+   * @param lastState
+   * @param additionalAmount
+   * @param isNewRoundStarting
+   * @return
+   */
   private List<Map<String, Object>> splitPotsForPartialCall(PokerState lastState, 
       int additionalAmount, boolean isNewRoundStarting) {
     
@@ -378,6 +386,15 @@ public class PokerLogic {
     
     return pots;
   }
+  
+  /**
+   * Since player is going all in during call move, 
+   * one of the pots need to be split into 2 pots.
+   * 
+   * @param lastState
+   * @param additionalAmount
+   * @return
+   */
   private List<Map<String, Object>> splitPotsForPartialCallHelper(PokerState lastState,
       int additionalAmount) {
     check(calculateLastRequiredBet(lastState) >= additionalAmount, "This is not an all-in call.");
@@ -651,6 +668,15 @@ public class PokerLogic {
     return true;
   }
   
+  /**
+   * Generates List of Operation objects for performing
+   * a Fold move by the current player, which will result
+   * in a new round.
+   * 
+   * @param lastState
+   * @param playerIds
+   * @return
+   */
   private List<Operation> doNewRoundAfterFoldMove(PokerState lastState, List<Integer> playerIds) {
     
     int numOfPlayers = lastState.getNumberOfPlayers();
@@ -680,12 +706,12 @@ public class PokerLogic {
     operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
     
     // Increment the current round
-    operations.add(new Set(CURRENT_ROUND, nextRound));
+    operations.add(new Set(CURRENT_ROUND, nextRound.name()));
     
     // Remove the current player from players in Hand
     List<Player> newPlayerInHand = removeFromList(lastState.getPlayersInHand(), 
-        Player.valueOf(P[playerIndex]));
-    operations.add(new Set(PLAYERS_IN_HAND, newPlayerInHand));
+        Player.values()[playerIndex]);
+    operations.add(new Set(PLAYERS_IN_HAND, helper.getApiPlayerList(newPlayerInHand)));
     
     // Set PlayerBets to 0
     List<Integer> newPlayerBets = createNewList(numOfPlayers, 0);
@@ -727,7 +753,8 @@ public class PokerLogic {
   
   /**
    * Generates List of Operation objects for performing
-   * a Check move by the current player and starting a new round.
+   * a Check move by the current player, which will result
+   * in a new round.
    * 
    * @param lastState
    * @param playerIds
@@ -791,6 +818,16 @@ public class PokerLogic {
     return operations;
   }
 
+  /**
+   * Generates List of Operation objects for performing
+   * a Call move by the current player, which will result
+   * in a new round.
+   * 
+   * @param lastState
+   * @param playerIds
+   * @param additionalAmount
+   * @return
+   */
   private List<Operation> doNewRoundAfterCallMove(PokerState lastState, List<Integer> playerIds,
       int additionalAmount) {
     
@@ -882,6 +919,13 @@ public class PokerLogic {
     return operations;
   }
 
+  /**
+   * Returns true if a new round is going to start after given move.
+   * 
+   * @param lastState
+   * @param previousMove
+   * @return
+   */
   private boolean isNewRoundStarting(PokerState lastState,
       PokerMove previousMove) {
     if (previousMove == PokerMove.BET || previousMove == PokerMove.RAISE) {
@@ -925,6 +969,14 @@ public class PokerLogic {
     return isNewRoundStarting;
   }
 
+  /**
+   * Generates List of Operation objects for performing
+   * a buy-in move by the current player.
+   * 
+   * @param playerId
+   * @param buyInAmount
+   * @return
+   */
   public List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
     return ImmutableList.<Operation>of(
         new AttemptChangeTokens(
@@ -932,6 +984,14 @@ public class PokerLogic {
             ImmutableMap.<Integer, Integer>of(playerId, buyInAmount)));
   }
   
+  /**
+   * Generates List of Operation objects for performing
+   * the initial move.
+   * 
+   * @param playerIds
+   * @param startingChips
+   * @return
+   */
   public List<Operation> getInitialMove(List<Integer> playerIds, Map<Integer, Integer> startingChips) {
     check(playerIds.size() >= 2 && playerIds.size() <= 9);
 
@@ -1041,6 +1101,12 @@ public class PokerLogic {
     return totalRequiredBet;
   }
   
+  /**
+   * Returns the Pot object in JSON based format.
+   * 
+   * @param pot
+   * @return
+   */
   private Map<String, Object> getApiPot(Pot pot) {
     return ImmutableMap.<String, Object>of(
         CHIPS, pot.getChips(),
@@ -1049,6 +1115,14 @@ public class PokerLogic {
         PLAYER_BETS, pot.getPlayerBets());
   }
   
+  /**
+   * Creates a new ImmutableList of given size where all elements
+   * are initialized with the given default object.
+   * 
+   * @param size
+   * @param defaultValue
+   * @return
+   */
   private <T> ImmutableList<T> createNewList(int size, T defaultValue) {
     ImmutableList.Builder<T> listBuilder = ImmutableList.<T>builder();
     for (int i = 0; i < size; i++) {
@@ -1073,6 +1147,15 @@ public class PokerLogic {
     return ImmutableList.<T>copyOf(list);
   }
   
+  /**
+   * Replaces an element at given index in the list;
+   * If index = size of list, adds the element at the end.
+   * 
+   * @param list
+   * @param obj
+   * @param index
+   * @return
+   */
   private <T> ImmutableList<T> addOrReplaceInList(List<T> list, T obj, int index) {
     if(index == list.size()) {
       //append is required
@@ -1093,6 +1176,13 @@ public class PokerLogic {
     }
   }
     
+  /**
+   * Removes an element at the given index from the list.
+   * 
+   * @param list
+   * @param obj
+   * @return
+   */
   private <T> ImmutableList<T> removeFromList(List<T> list, T obj) {
     int index = list.indexOf(obj);
     if(index == -1) {
@@ -1170,36 +1260,12 @@ public class PokerLogic {
     throw new IllegalStateException("Not all-in player in hand not found.");
   }
   
-  private List<Map<String, Object>> addChipsInPots(List<Pot> pots, Player player, int chips) {
-    List<Map<String, Object>> newPots = Lists.newArrayList();
-    int i = pots.size() - 1;
-    while(i >= 0 && chips > 0) {
-      Pot pot = pots.get(i);
-      int potBet = pot.getCurrentPotBet();
-      int chipsToAdd;
-      if(chips >= potBet) {
-        chipsToAdd = potBet;
-        chips -= potBet;
-      }
-      else {
-        chipsToAdd = chips;
-        chips = 0;
-      }
-      newPots.add(0, ImmutableMap.<String, Object>of(
-          CHIPS, pot.getChips() + chipsToAdd,
-          CURRENT_POT_BET, pot.getCurrentPotBet(),
-          PLAYERS_IN_POT, helper.getApiPlayerList(pot.getPlayersInPot())));
-    }
-    for(; i >= 0; i--) {
-      Pot pot = pots.get(i);
-      newPots.add(0, ImmutableMap.<String, Object>of(
-          CHIPS, pot.getChips(),
-          CURRENT_POT_BET, pot.getCurrentPotBet(),
-          PLAYERS_IN_POT, helper.getApiPlayerList(pot.getPlayersInPot())));
-    }
-    return newPots;
-  }
-  
+  /**
+   * Checks if next player to act was the big blind.
+   * 
+   * @param state
+   * @return
+   */
   private boolean isBigBlindMove(PokerState state) {
     int numberOfPlayers = state.getNumberOfPlayers();
     int bigBlindIndex = numberOfPlayers > 2 ? 2 : 1;
@@ -1244,15 +1310,15 @@ public class PokerLogic {
     switch(newRound) {
     case FLOP:
       return ImmutableList.<Operation>of(
-          new SetVisibility(C + numberOfPlayers * 2),
-          new SetVisibility(C + numberOfPlayers * 2 + 1),
-          new SetVisibility(C + numberOfPlayers * 2 + 2));
+          new SetVisibility(C + (numberOfPlayers * 2)),
+          new SetVisibility(C + (numberOfPlayers * 2 + 1)),
+          new SetVisibility(C + (numberOfPlayers * 2 + 2)));
     case TURN:
       return ImmutableList.<Operation>of(
-          new SetVisibility(C + numberOfPlayers * 2 + 3));
+          new SetVisibility(C + (numberOfPlayers * 2 + 3)));
     case RIVER:
       return ImmutableList.<Operation>of(
-          new SetVisibility(C + numberOfPlayers * 2 + 4));
+          new SetVisibility(C + (numberOfPlayers * 2 + 4)));
     case SHOWDOWN:
       return ImmutableList.<Operation>of();
     default:

@@ -69,6 +69,24 @@ public class PokerHand {
     return sb.toString();
   }
   
+  /**
+   * Lazily calculates the integer list representing the standing of
+   * this poker hand.<P>
+   * Starting number:
+   * <ul>
+   * <li>8 - Straight Flush</li>
+   * <li>7 - Four of a kind</li>
+   * <li>6 - Full house</li>
+   * <li>5 - Flush</li>
+   * <li>4 - Straight</li>
+   * <li>3 - Three of a kind</li>
+   * <li>2 - Two Pair</li>
+   * <li>1 - Pair</li>
+   * <li>0 - High Card</li>
+   * </ul>
+   * 
+   * @return
+   */
   public List<Integer> getRanking() {
     
     if(ranking != null) {
