@@ -39,7 +39,7 @@ public class BestHandFinder {
   private void testCombinations(int depth, int num) {
     if(depth == 5) {
       PokerHand pokerHand = new PokerHand(hand);
-      if(bestHand == null || pokerHand.betterThan(bestHand)) {
+      if(bestHand == null || pokerHand.compareRanking(bestHand) > 0) {
         bestHand = pokerHand;
       }
     }
