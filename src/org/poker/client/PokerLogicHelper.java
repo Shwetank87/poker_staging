@@ -1,13 +1,18 @@
 package org.poker.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.poker.client.Card.*;
+import org.poker.client.util.BestHandFinder;
+import org.poker.client.util.PokerHand;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class PokerLogicHelper {
 
@@ -127,8 +132,58 @@ public class PokerLogicHelper {
   }
 
   public List<List<Integer>> getWinners(PokerState lastState, List<Integer> playerIds) {
-    // TODO Auto-generated method stub
-    return null;
+    
+    List<Player> playersInHand = lastState.getPlayersInHand();
+    List<PokerHand> bestHands = Lists.newArrayList();
+    // Get best poker hands for each player in pot
+    for (int i = 0; i < playerIds.size(); i++) {
+      if(playersInHand.contains(Player.values()[i])) {
+        List<Card> board = Lists.newArrayList();
+        List<Card> holeCards = Lists.newArrayList();
+        for(Optional<Integer> boardCard : lastState.getBoard()) {
+          board.add(lastState.getCards().get(boardCard.get()).get());
+        }
+        for(Optional<Integer> holeCard : lastState.getHoleCards().get(i)) {
+          board.add(lastState.getCards().get(holeCard.get()).get());
+        }
+        bestHands.add(new BestHandFinder(board, holeCards).find());
+      }
+      else {
+        //We don't care about players that folded
+        bestHands.add(null);
+      }
+    }
+    // For each pot, find list of players that had the best hand
+    // Add this list to the return list
+    List<List<Integer>> winners = Lists.newArrayList();
+    List<Pot> pots = lastState.getPots();
+    for(Pot pot : pots) {
+      List<Player> playersInPot = pot.getPlayersInPot();
+      List<Integer> potWinners = Lists.newArrayList();
+      PokerHand bestHandInPot = null;
+      for(Player player : playersInPot) {
+        PokerHand currentHand = bestHands.get(player.ordinal());
+        if(bestHandInPot == null) {
+          bestHandInPot = currentHand;
+        }
+        int comparison = currentHand.compareRanking(bestHandInPot);
+        if(comparison > 0) {
+          //found better hand
+          bestHandInPot = currentHand;
+          potWinners = Lists.newArrayList();
+          potWinners.add(playerIds.get(player.ordinal()));
+        }
+        else if(comparison == 0) {
+          //found equally good hand
+          potWinners.add(playerIds.get(player.ordinal()));
+        }
+        else {
+          //found worse hand. ignore it.
+        }
+      }
+      winners.add(potWinners);
+    }
+    return winners;
   }
   
 }
