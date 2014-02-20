@@ -89,9 +89,9 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
               CURRENT_POT_BET, 400,
               PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[0]),
               PLAYER_BETS, ImmutableList.of(400, 400, 400)))),
-              new SetVisibility("C0"), new SetVisibility("C1"),
               new SetVisibility("C2"), new SetVisibility("C3"),
-              new SetVisibility("C4"), new SetVisibility("C5"));
+              new SetVisibility("C4"), new SetVisibility("C5"),
+              new SetVisibility("C0"), new SetVisibility("C1"));
   
 
   /**

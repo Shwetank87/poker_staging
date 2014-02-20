@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -145,12 +144,8 @@ public class PokerLogic {
    */
   private List<Operation> doFoldMove(PokerState lastState, List<Integer> playerIds) {
     
-    if(isGameOverAfterFold(lastState)) {
-      return doGameOverAfterFold(lastState);
-    }
-    
     if (isNewRoundStarting(lastState, PokerMove.FOLD)) {
-      return doNewRoundAfterFoldMove(lastState);
+      return doNewRoundAfterFoldMove(lastState, playerIds);
     }
     
     List<Operation> operations = Lists.newArrayList();
@@ -201,11 +196,8 @@ public class PokerLogic {
    * @return
    */
   List<Operation> doCheckMove(PokerState lastState, List<Integer> playerIds) {
-    //TODO : game end after check move?
-    boolean isEndGame = isGameOverAfterMove(lastState, PokerMove.CHECK);
-    boolean isNewRoundStarting = isNewRoundStarting(lastState, PokerMove.CHECK);
     
-    if (isNewRoundStarting) {
+    if (isNewRoundStarting(lastState, PokerMove.CHECK)) {
       return doNewRoundAfterCheckMove(lastState , playerIds);
     }
     
@@ -232,12 +224,8 @@ public class PokerLogic {
    */
   List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds, int additionalAmount) {
     
-    if(isGameOverAfterMove(lastState, PokerMove.CALL)) {
-      return doGameOverAfterCallMove(lastState, additionalAmount);
-    }
-    
     if (isNewRoundStarting(lastState, PokerMove.CALL)) {
-      return doNewRoundAfterCallMove(lastState, additionalAmount);
+      return doNewRoundAfterCallMove(lastState, playerIds, additionalAmount);
     }
     
     int playerIndex = lastState.getWhoseMove().ordinal();
@@ -302,8 +290,8 @@ public class PokerLogic {
   
   private List<Map<String, Object>> splitPotsForPartialCall(PokerState lastState, 
       int additionalAmount, boolean isNewRoundStarting) {
-    List<Map<String, Object>> pots = splitPotsForPartialCallHelper(lastState, additionalAmount);
     
+    List<Map<String, Object>> pots = splitPotsForPartialCallHelper(lastState, additionalAmount);
     
     if(isNewRoundStarting){
       List<Map<String, Object>> newPots = Lists.newArrayList();
@@ -540,7 +528,7 @@ public class PokerLogic {
         List<Integer> newPlayerBetsInFinalPot = addOrReplaceInList(playerBetsInFinalPot,
             Integer.valueOf(requiredPotBet + raiseByAmount), playerIndex);
         newPots.add(ImmutableMap.<String, Object>of(
-            CHIPS, finalPot.getChips() + (requiredPotBet - existingPlayerBet) + raiseByAmount,
+            CHIPS, finalPot.getChips() + (requiredPotBet - existingPotBet) + raiseByAmount,
             CURRENT_POT_BET, requiredPotBet + raiseByAmount,
             PLAYERS_IN_POT, addToList(helper.getApiPlayerList(finalPot.getPlayersInPot()), P[playerIndex]),
             PLAYER_BETS, newPlayerBetsInFinalPot));
@@ -560,22 +548,57 @@ public class PokerLogic {
     return operations;
   }
  
+  /**
+   * Returns true if the game ends after this move because all other 
+   * players are all-in. 
+   * 
+   * @param lastState
+   * @param move
+   * @return
+   */
   private boolean isGameOverAfterMove(PokerState lastState, PokerMove move) {
-    // TODO Auto-generated method stub
-    boolean isNewRoundStarting = isNewRoundStarting(lastState, move);
-    if (isNewRoundStarting) {
-      return BettingRound.RIVER == lastState.getCurrentRound() ? true : false;
+    // TODO fix next turn in new round methods
+    if(move == PokerMove.BET || move == PokerMove.RAISE) {
+      //Game cannot get over after a bet or a raise
+      return false;
     }
-    return false;
+    if(lastState.getCurrentRound() == BettingRound.RIVER) {
+      //Method doNewRoundAfterXyzMove() will handle this scenario
+      return false;
+    }
+    List<Player> playersInHand = lastState.getPlayersInHand();
+    for(Player player : playersInHand) {
+      if(player == lastState.getWhoseMove()) {
+        continue;
+      }
+      if(lastState.getPlayerChips().get(player.ordinal()) == 0) {
+        // This player is all-in, move on.
+        continue;
+      }
+      // Found another player who's not all-in
+      return false;
+    }
+    // All other players were all-in, so the game is over
+    return true;
   }
   
-  private List<Operation> doNewRoundAfterFoldMove(PokerState lastState) {
+  private List<Operation> doNewRoundAfterFoldMove(PokerState lastState, List<Integer> playerIds) {
+    
     int numOfPlayers = lastState.getNumberOfPlayers();
     int playerIndex = lastState.getWhoseMove().ordinal();
-    int nextTurnIndex = getNextTurnIndex(lastState);
-    BettingRound newRound = lastState.getCurrentRound().getNextRound();
+    BettingRound nextRound = lastState.getCurrentRound().getNextRound();
+    boolean noPlayersLeft = isGameOverAfterMove(lastState, PokerMove.FOLD);
+    boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
+    //If game is ending, next turn will be set to the same player
+    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNextTurnIndex(lastState);
+    if(noPlayersLeft) {
+      nextRound = BettingRound.SHOWDOWN;
+    }
     
     List<Operation> operations = new ArrayList<Operation>();
+    
+    // SetTurn
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
     
     // Set previous move
     operations.add(new Set(PREVIOUS_MOVE, PokerMove.FOLD.name()));
@@ -587,13 +610,11 @@ public class PokerLogic {
     operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
     
     // Increment the current round
-    operations.add(new Set(CURRENT_ROUND, newRound ));
-    
-    // Open the board cards
-    operations.addAll(openNewCommunityCards(lastState));
+    operations.add(new Set(CURRENT_ROUND, nextRound));
     
     // Remove the current player from players in Hand
-    List<Player> newPlayerInHand = removeFromList(lastState.getPlayersInHand(),Player.valueOf(P[playerIndex]));
+    List<Player> newPlayerInHand = removeFromList(lastState.getPlayersInHand(), 
+        Player.valueOf(P[playerIndex]));
     operations.add(new Set(PLAYERS_IN_HAND, newPlayerInHand));
     
     // Set PlayerBets to 0
@@ -615,6 +636,22 @@ public class PokerLogic {
     
     operations.add(new Set(POTS, newPots));
     
+    if(isGameEnding || noPlayersLeft){
+      operations.addAll(makeHoleCardsVisible(lastState, PokerMove.FOLD));
+    }
+    if (!isGameEnding) {
+      int numberOfPlayers = lastState.getNumberOfPlayers();
+      BettingRound currentRound = lastState.getCurrentRound();
+      if(noPlayersLeft) {
+        // Open all the remaining cards
+        operations.addAll(openAllCommunityCards(currentRound, numberOfPlayers));
+      }
+      else {
+        // Open next board card(s)
+        operations.addAll(openNextCommunityCards(currentRound, numberOfPlayers));
+      }
+    }
+    
     return operations;
   }
   
@@ -628,10 +665,16 @@ public class PokerLogic {
    */
   private List<Operation> doNewRoundAfterCheckMove(PokerState lastState, List<Integer> playerIds) {
     
-    int nextTurnIndex = getNextTurnIndex(lastState);
     BettingRound nextRound = lastState.getCurrentRound().getNextRound();
+    int playerIndex = lastState.getWhoseMove().ordinal();
+    boolean noPlayersLeft = isGameOverAfterMove(lastState, PokerMove.CHECK);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
+    //If game is ending, next turn will be set to the same player
+    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNextTurnIndex(lastState);
     int numberOfPlayers = lastState.getNumberOfPlayers();
+    if(noPlayersLeft) {
+      nextRound = BettingRound.SHOWDOWN;
+    }
 
     List<Operation> operations = Lists.newArrayList();
 
@@ -660,26 +703,40 @@ public class PokerLogic {
     
     operations.add(new Set(POTS, newPots));
     
-    if(isGameEnding){
+    if(isGameEnding || noPlayersLeft){
       operations.addAll(makeHoleCardsVisible(lastState, PokerMove.CHECK));
     }
     
     if (!isGameEnding) {
-      operations.addAll(openNewCommunityCards(lastState));
+      BettingRound currentRound = lastState.getCurrentRound();
+      if(noPlayersLeft) {
+        operations.addAll(openAllCommunityCards(currentRound, numberOfPlayers));
+      }
+      else {
+        operations.addAll(openNextCommunityCards(currentRound, numberOfPlayers));
+      }
     }
     
     return operations;
   }
 
-  private List<Operation> doNewRoundAfterCallMove(PokerState lastState, int additionalAmount) {
+  private List<Operation> doNewRoundAfterCallMove(PokerState lastState, List<Integer> playerIds,
+      int additionalAmount) {
+    
     int numOfPlayers = lastState.getNumberOfPlayers();
     int playerIndex = lastState.getWhoseMove().ordinal();
     int currentBetAmount = lastState.getPlayerBets().get(playerIndex);
     int requiredBetAmount = calculateLastRequiredBet(lastState);
     int currentPlayerChips = lastState.getPlayerChips().get(playerIndex);
-    int nextTurnIndex = getNextTurnIndex(lastState);
-    BettingRound newRound = lastState.getCurrentRound().getNextRound();
+    BettingRound nextRound = lastState.getCurrentRound().getNextRound();
+    boolean noPlayersLeft = isGameOverAfterMove(lastState, PokerMove.CALL);
+    boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
+    //If game is ending, next turn will be set to the same player
+    int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNextTurnIndex(lastState);
     boolean isAllIn = (currentPlayerChips == additionalAmount);
+    if(noPlayersLeft) {
+      nextRound = BettingRound.SHOWDOWN;
+    }
     
     // Required all in checks
     if(isAllIn) {
@@ -691,6 +748,8 @@ public class PokerLogic {
     
     List<Operation> operations = new ArrayList<Operation>();
     
+    operations.add(new SetTurn(playerIds.get(nextTurnIndex)));
+    
     // Set previous move
     operations.add(new Set(PREVIOUS_MOVE, PokerMove.CALL.name()));
     
@@ -701,10 +760,7 @@ public class PokerLogic {
     operations.add(new Set(WHOSE_MOVE, P[nextTurnIndex]));
     
     // Increment the current round
-    operations.add(new Set(CURRENT_ROUND, newRound ));
-    
-    // Open the board cards
-    operations.addAll(openNewCommunityCards(lastState));
+    operations.add(new Set(CURRENT_ROUND, nextRound.name()));
     
     // Set PlayerBets to 0
     List<Integer> newPlayerBets = createNewList(numOfPlayers, 0);
@@ -727,7 +783,6 @@ public class PokerLogic {
         int existingBet = lastState.getPlayerBets().get(playerIndex);
         List<String> playersInPot = helper.getApiPlayerList(pot.getPlayersInPot());
         List<String> newPlayersInPot = addToList(playersInPot, lastState.getWhoseMove().name());
-        List<Integer> playerPotBets = pot.getPlayerBets();
         List<Integer> newPlayerPotBets = createNewList(numOfPlayers, 0);
         newPots.add(ImmutableMap.<String, Object>of(
             CHIPS, pot.getChips() + pot.getCurrentPotBet() - existingBet,
@@ -738,17 +793,21 @@ public class PokerLogic {
     }
     operations.add(new Set(POTS, newPots));
     
-    return null;
-  }
-
-  private List<Operation> doGameOverAfterFold(PokerState lastState) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  private List<Operation> doGameOverAfterCallMove(PokerState lastState, int additionalAmount) {
-    // TODO Auto-generated method stub
-    return null;
+    if(isGameEnding || noPlayersLeft){
+      operations.addAll(makeHoleCardsVisible(lastState, PokerMove.CALL));
+    }
+    
+    if (!isGameEnding) {
+      BettingRound currentRound = lastState.getCurrentRound();
+      int numberOfPlayers = lastState.getNumberOfPlayers();
+      if(noPlayersLeft) {
+        operations.addAll(openAllCommunityCards(currentRound, numberOfPlayers));
+      }
+      else {
+        operations.addAll(openNextCommunityCards(currentRound, numberOfPlayers));
+      }
+    }
+    return operations;
   }
 
   private boolean isNewRoundStarting(PokerState lastState,
@@ -1050,15 +1109,36 @@ public class PokerLogic {
   }
   
   /**
+   * Returns list of SetVisibility operations to open all the
+   * remaining community cards
+   * 
+   * @param state
+   * @return
+   */
+  private List<Operation> openAllCommunityCards(BettingRound currentRound, int numberOfPlayers) {
+    ImmutableList.Builder<Operation> builder = ImmutableList.builder();
+    switch(currentRound) {
+    case PRE_FLOP:
+      builder.addAll(openNextCommunityCards(BettingRound.PRE_FLOP, numberOfPlayers));
+    case FLOP:
+      builder.addAll(openNextCommunityCards(BettingRound.FLOP, numberOfPlayers));
+    case TURN:
+      builder.addAll(openNextCommunityCards(BettingRound.TURN, numberOfPlayers));
+    default:
+      break;
+    }
+    return builder.build();
+  }
+  
+  /**
    * Returns list of SetVisibility operations to open the required
    * community cards to start a new round.
    * 
    * @param state
    * @return
    */
-  private List<Operation> openNewCommunityCards(PokerState state) {
-    BettingRound newRound = state.getCurrentRound().getNextRound();
-    int numberOfPlayers = state.getNumberOfPlayers();
+  private List<Operation> openNextCommunityCards(BettingRound currentRound, int numberOfPlayers) {
+    BettingRound newRound = currentRound.getNextRound();
     switch(newRound) {
     case FLOP:
       return ImmutableList.<Operation>of(
@@ -1074,7 +1154,7 @@ public class PokerLogic {
     case SHOWDOWN:
       return ImmutableList.<Operation>of();
     default:
-        throw new IllegalStateException("Invalid round reached.");
+      throw new IllegalStateException("Invalid round reached.");
     }
   }
   
