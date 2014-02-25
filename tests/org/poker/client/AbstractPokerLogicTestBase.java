@@ -248,6 +248,36 @@ public abstract class AbstractPokerLogicTestBase {
       build();
   
 
+  /**
+   * 4 way hand on Flop<Br>
+   * Pot amount before Flop: 2000<Br>
+   * P1 folds<Br>
+   * P2 to act<Br>
+   */
+  protected final ImmutableMap<String, Object> flopFourPlayerNoBetsMadeState =
+      ImmutableMap.<String, Object>builder().
+      put(PREVIOUS_MOVE, PokerMove.FOLD.name()).
+      put(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE).
+      put(NUMBER_OF_PLAYERS, 4).
+      put(WHOSE_MOVE, P[2]).
+      put(CURRENT_BETTER, P[1]).
+      put(CURRENT_ROUND, BettingRound.FLOP.name()).
+      put(PLAYERS_IN_HAND, ImmutableList.of( P[2], P[3], P[0])).
+      put(HOLE_CARDS, ImmutableList.of(
+          ImmutableList.of(0, 1), ImmutableList.of(2, 3),
+          ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
+      put(BOARD, ImmutableList.of(8, 9, 10, 11, 12)).
+      put(PLAYER_BETS, ImmutableList.of(0, 0, 0, 0)).
+      put(PLAYER_CHIPS, ImmutableList.of(2000 , 2000, 3000 , 5000)).
+      put(POTS, ImmutableList.of(
+          ImmutableMap.<String, Object>of(
+              CHIPS, 2000,
+              CURRENT_POT_BET, 0,
+              PLAYERS_IN_POT, ImmutableList.of( P[2], P[3], P[0]),
+              PLAYER_BETS, ImmutableList.of(0, 0, 0, 0)))).
+      build();
+  
+  
   // Utility methods
   
   protected ImmutableList<Map<String, Object>> getPlayersInfo(int numOfPlayers) {

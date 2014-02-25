@@ -25,6 +25,28 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+/** Tests for {@link PokerPresenter}.<br>
+ * Test plan:<br>
+ * There are several scenarios for Presenter to handle:<br>
+ * 1) Initial buy-in moves<br>
+ * 2) initial empty state move by dealer<br>
+ * 3) Following moves by any player:<br>
+ *      - Fold<br>
+ *      - Check<br>
+ *      - Call<br>
+ *      - Bet<br>
+ *      - Raise<br>
+ *      - All-in<br>
+ * 4) Viewer's turn<br>
+ * 5) End-Game scenario
+ *<P>
+ * One or more of the following methods will be called in each case:<br>
+ * 1) doBuyIn<br>
+ * 2) buyInDone<br>
+ * 3) makeYourMove<br>
+ * 4) moveMade<br>
+ */
+
 @RunWith(JUnit4.class)
 public class PokerPresenterTest extends AbstractPokerLogicTestBase {
 
@@ -121,6 +143,37 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doRaiseMove(state, playersIds_4_players, 1000));
   }
+  
+  @Test
+  public void testFlopFourPlayerBetMove() {
+    PokerState state = pokerLogicHelper.gameApiStateToPokerState(
+        flopFourPlayerNoBetsMadeState);
+    pokerPresenter.updateUI(createUpdateUI(4, p2_id, p2_id, flopFourPlayerNoBetsMadeState,
+        startingChips_4_player));
+    //P2 bets 500
+    pokerPresenter.moveMade(PokerMove.BET, 500);
+    verify(mockView).setPlayerState(4, 2, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).makeYourMove();
+    verify(mockContainer).sendMakeMove(pokerLogic.doBetMove(state, playersIds_4_players, 500));
+  }
+  
+  @Test
+  public void testFlopFourPlayerCheckMove() {
+    PokerState state = pokerLogicHelper.gameApiStateToPokerState(
+        flopFourPlayerNoBetsMadeState);
+    pokerPresenter.updateUI(createUpdateUI(4, p2_id, p2_id, flopFourPlayerNoBetsMadeState,
+        startingChips_4_player));
+    //P2 bets 500
+    pokerPresenter.moveMade(PokerMove.CHECK, 0);
+    verify(mockView).setPlayerState(4, 2, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).makeYourMove();
+    verify(mockContainer).sendMakeMove(pokerLogic.doCheckMove(state, playersIds_4_players));
+  }
+  
+  
+  
   
   @Test
   public void testFlopFourPlayerOtherPlayerMove() {
