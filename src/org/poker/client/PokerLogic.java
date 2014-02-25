@@ -23,31 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
-public class PokerLogic {
+public class PokerLogic extends AbstractPokerLogicBase {
 
-  public static final int SMALL_BLIND = 100;
-  public static final int BIG_BLIND = 200;
-
-  private static final String[] P = {"P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"};
-  private static final String C = "C";
-
-  private static final String PREVIOUS_MOVE = "previousMove";
-  private static final String PREVIOUS_MOVE_ALL_IN = "previousMoveAllIn";
-  private static final String NUMBER_OF_PLAYERS = "numberOfPlayers";
-  private static final String WHOSE_MOVE = "whoseMove";
-  private static final String CURRENT_BETTER = "currentBetter";
-  private static final String CURRENT_ROUND = "currentRound";
-  private static final String PLAYERS_IN_HAND = "playersInHand";
-  private static final String BOARD = "board";
-  private static final String HOLE_CARDS = "holeCards";
-  private static final String PLAYER_BETS = "playerBets";
-  private static final String PLAYER_CHIPS = "playerChips";
-  private static final String POTS = "pots";
-  private static final String CHIPS = "chips";
-  private static final String CURRENT_POT_BET = "currentPotBet";
-  private static final String PLAYERS_IN_POT = "playersInPot";
-
-  private PokerLogicHelper helper = PokerLogicHelper.getInstance();
+  public PokerLogicHelper helper = PokerLogicHelper.getInstance();
 
   public VerifyMoveDone verify(VerifyMove verifyMove) {
     try {
