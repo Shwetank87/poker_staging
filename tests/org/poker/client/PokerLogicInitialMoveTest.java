@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
 import org.poker.client.GameApi.SetVisibility;
@@ -15,6 +17,7 @@ import org.poker.client.GameApi.VerifyMove;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+@RunWith(JUnit4.class)
 public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   private List<Operation> getInitialOperations(List<Integer> playerIds,

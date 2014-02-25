@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 
 public class PokerLogic extends AbstractPokerLogicBase {
 
-  public PokerLogicHelper helper = PokerLogicHelper.getInstance();
+  private PokerLogicHelper helper = PokerLogicHelper.getInstance();
 
   public VerifyMoveDone verify(VerifyMove verifyMove) {
     try {
@@ -101,7 +101,6 @@ public class PokerLogic extends AbstractPokerLogicBase {
       return doCheckMove(lastState, playerIds);
     }
     else if (previousMove == PokerMove.CALL) {
-      int existingBetAmount = lastState.getPlayerBets().get(playerIndex);
       int additionalAmount = lastState.getPlayerChips().get(playerIndex) -
           ((List<Integer>) getSetOperationVal(PLAYER_CHIPS, lastMove)).get(playerIndex);
       return doCallMove(lastState, playerIds, additionalAmount);
@@ -131,7 +130,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * @param playerIds
    * @return
    */
-  private List<Operation> doEndGameMove(PokerState lastState, List<Integer> playerIds) {
+  List<Operation> doEndGameMove(PokerState lastState, List<Integer> playerIds) {
     
     List<List<Integer>> winnersForEachPot = helper.getWinners(lastState, playerIds);
     
@@ -188,7 +187,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * @param playerIds
    * @return
    */
-  private List<Operation> doFoldMove(PokerState lastState, List<Integer> playerIds) {
+  List<Operation> doFoldMove(PokerState lastState, List<Integer> playerIds) {
     
     if (isNewRoundStarting(lastState, PokerMove.FOLD)) {
       return doNewRoundAfterFoldMove(lastState, playerIds);
@@ -450,7 +449,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * @param betAmount
    * @return
    */
-  private List<Operation> doBetMove(PokerState lastState, List<Integer> playerIds, int betAmount) {
+  List<Operation> doBetMove(PokerState lastState, List<Integer> playerIds, int betAmount) {
     
     // In Bet move existing bet should be zero, otherwise it'll be a raise
     check(calculateLastRequiredBet(lastState) == 0, "Bet Move: Non-zero existing bet");
@@ -522,7 +521,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * @param additionalAmount
    * @return
    */
-  private List<Operation> doRaiseMove(PokerState lastState, List<Integer> playerIds,
+  List<Operation> doRaiseMove(PokerState lastState, List<Integer> playerIds,
       int additionalAmount) {
     
     int playerIndex = lastState.getWhoseMove().ordinal();
@@ -955,7 +954,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * @param buyInAmount
    * @return
    */
-  public List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
+  List<Operation> getInitialBuyInMove(int playerId, int buyInAmount) {
     return ImmutableList.<Operation>of(
         new AttemptChangeTokens(
             ImmutableMap.<Integer, Integer>of(playerId, buyInAmount*(-1)),
@@ -970,7 +969,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * @param startingChips
    * @return
    */
-  public List<Operation> getInitialMove(List<Integer> playerIds, Map<Integer, Integer> startingChips) {
+  List<Operation> getInitialMove(List<Integer> playerIds, Map<Integer, Integer> startingChips) {
     check(playerIds.size() >= 2 && playerIds.size() <= 9);
 
     int numberOfPlayers = playerIds.size();
@@ -1358,7 +1357,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
   // Following utility methods have been copied from CheatLogic.java
   // in project https://github.com/yoav-zibin/cheat-game
   
-  List<Integer> getIndicesInRange(int fromInclusive, int toInclusive) {
+  private List<Integer> getIndicesInRange(int fromInclusive, int toInclusive) {
     List<Integer> keys = Lists.newArrayList();
     for (int i = fromInclusive; i <= toInclusive; i++) {
       keys.add(i);
@@ -1366,7 +1365,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
     return keys;
   }
 
-  List<String> getCardsInRange(int fromInclusive, int toInclusive) {
+  private List<String> getCardsInRange(int fromInclusive, int toInclusive) {
     List<String> keys = Lists.newArrayList();
     for (int i = fromInclusive; i <= toInclusive; i++) {
       keys.add(C + i);
@@ -1374,7 +1373,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
     return keys;
   }
 
-  String cardIdToString(int cardId) {
+  private String cardIdToString(int cardId) {
     checkArgument(cardId >= 0 && cardId < 52);
     int rank = (cardId / 4);
     String rankString = Rank.values()[rank].getFirstLetter();

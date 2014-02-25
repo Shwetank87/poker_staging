@@ -1,5 +1,6 @@
 package org.poker.client;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 
 public class Pot {
@@ -19,6 +20,21 @@ public class Pot {
     this.currentPotBet = currentPotBet;
     this.playersInPot = playersInPot;
     this.playerBets = playerBets;
+  }
+  
+  @Override
+  public boolean equals(Object obj) {
+    if(obj == this) return true;
+    if(obj == null) return false;
+    
+    if(obj instanceof Pot) {
+      Pot other = (Pot)obj;
+      return chips == other.chips &&
+          currentPotBet == other.currentPotBet &&
+          Objects.equal(playersInPot, other.playersInPot) &&
+          Objects.equal(playerBets, other.playerBets);
+    }
+    return false;
   }
 
   public int getChips() {

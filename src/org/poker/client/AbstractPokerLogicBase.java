@@ -4,7 +4,7 @@ public abstract class AbstractPokerLogicBase {
   
   public static final int SMALL_BLIND = 100;
   public static final int BIG_BLIND = 200;
-  public static final int DEALER_INDEX = 0; 
+  public static final int DEALER_INDEX = 0;
 
   protected static final String[] P = {"P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"};
   protected static final String C = "C";

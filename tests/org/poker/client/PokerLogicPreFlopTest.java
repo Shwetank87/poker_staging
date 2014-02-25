@@ -3,6 +3,8 @@ package org.poker.client;
 import java.util.List;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.poker.client.GameApi.Operation;
 import org.poker.client.GameApi.Set;
 import org.poker.client.GameApi.SetTurn;
@@ -13,35 +15,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+@RunWith(JUnit4.class)
 public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
   
-  /**
-   * 4-way hand during PreFlop<Br>
-   * Blinds 100/200<Br>
-   * P3 bets 600<Br>
-   * P0 (dealer) to act
-   */
-  protected final ImmutableMap<String, Object> preFlopFourPlayerDealersTurnState = 
-      ImmutableMap.<String, Object>builder().
-          put(PREVIOUS_MOVE, PokerMove.RAISE.name()).
-          put(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE).
-          put(NUMBER_OF_PLAYERS, 4).
-          put(WHOSE_MOVE, P[0]).
-          put(CURRENT_BETTER, P[3]).
-          put(CURRENT_ROUND, BettingRound.PRE_FLOP.name()).
-          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])).
-          put(HOLE_CARDS, ImmutableList.of(
-              ImmutableList.of(0, 1), ImmutableList.of(2, 3),
-              ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
-          put(BOARD, ImmutableList.of(8, 9, 10, 11, 12)).
-          put(PLAYER_BETS, ImmutableList.of(0, 100, 200, 600)).
-          put(PLAYER_CHIPS, ImmutableList.of(2000, 1900, 1800, 1400)).
-          put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
-              CHIPS, 900,
-              CURRENT_POT_BET, 600,
-              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2], P[3]),
-              PLAYER_BETS, ImmutableList.of(0, 100, 200, 600)))).
-          build();
   
   protected final ImmutableList<Operation> preFlopFourPlayerDealerFold =
       ImmutableList.<Operation>of(
@@ -87,34 +63,6 @@ public class PokerLogicPreFlopTest extends AbstractPokerLogicTestBase {
     return listBuilder.build();
   }
 
-  
-  /**
-   * 4-way hand during PreFlop<Br>
-   * Blinds 100/200<Br>
-   * P3 to act
-   */
-  private final ImmutableMap<String, Object> preFlopFourPlayerFirstMoveState = 
-      ImmutableMap.<String, Object>builder().
-          put(PREVIOUS_MOVE, PokerMove.RAISE.name()).
-          put(PREVIOUS_MOVE_ALL_IN, Boolean.FALSE).
-          put(NUMBER_OF_PLAYERS, 4).
-          put(WHOSE_MOVE, P[3]).
-          put(CURRENT_BETTER, P[2]).
-          put(CURRENT_ROUND, BettingRound.PRE_FLOP.name()).
-          put(PLAYERS_IN_HAND, ImmutableList.of(P[1], P[2], P[3], P[0])).
-          put(HOLE_CARDS, ImmutableList.of(
-              ImmutableList.of(0, 1), ImmutableList.of(2, 3),
-              ImmutableList.of(4, 5), ImmutableList.of(6, 7))).
-          put(BOARD, ImmutableList.of(8, 9, 10, 11, 12)).
-          put(PLAYER_BETS, ImmutableList.of(0, 100, 200, 0)).
-          put(PLAYER_CHIPS, ImmutableList.of(2000, 1900, 1800, 2000)).
-          put(POTS, ImmutableList.of(ImmutableMap.<String, Object>of(
-              CHIPS, 300,
-              CURRENT_POT_BET, 200,
-              PLAYERS_IN_POT, ImmutableList.of(P[1], P[2]),
-              PLAYER_BETS, ImmutableList.of(0, 100, 200, 0)))).
-          build();
-  
   
   //Tests
   

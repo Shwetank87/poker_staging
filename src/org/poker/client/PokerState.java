@@ -37,12 +37,12 @@ public class PokerState {
    * List of hole cards belonging to each player List of bets made by each
    * player List of chips held by each player
    */
-  private ImmutableList<ImmutableList<Optional<Integer>>> holeCards;
+  private ImmutableList<ImmutableList<Integer>> holeCards;
 
   /**
    * 5 community cards
    */
-  private ImmutableList<Optional<Integer>> board;
+  private ImmutableList<Integer> board;
 
   private ImmutableList<Integer> playerBets;
   
@@ -51,12 +51,13 @@ public class PokerState {
   private ImmutableList<Pot> pots;
 
   
-  public PokerState(PokerMove previousMove, boolean previousMoveAllIn, int numberOfPlayers, Player whoseMove,
+  public PokerState(PokerMove previousMove, boolean previousMoveAllIn,
+      int numberOfPlayers, Player whoseMove,
       Player currentBetter, BettingRound currentRound,
       ImmutableList<Optional<Card>> cards,
-      ImmutableList<Optional<Integer>> board,
+      ImmutableList<Integer> board,
       ImmutableList<Player> playersInHand,
-      ImmutableList<ImmutableList<Optional<Integer>>> holeCards,
+      ImmutableList<ImmutableList<Integer>> holeCards,
       ImmutableList<Integer> playerBets, ImmutableList<Integer> playerChips,
       ImmutableList<Pot> pots) {
     super();
@@ -113,12 +114,12 @@ public class PokerState {
   }
   
 
-  public ImmutableList<ImmutableList<Optional<Integer>>> getHoleCards() {
+  public ImmutableList<ImmutableList<Integer>> getHoleCards() {
     return holeCards;
   }
 
 
-  public ImmutableList<Optional<Integer>> getBoard() {
+  public ImmutableList<Integer> getBoard() {
     return board;
   }
 
