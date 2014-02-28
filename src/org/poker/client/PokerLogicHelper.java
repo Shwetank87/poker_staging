@@ -37,8 +37,8 @@ public class PokerLogicHelper extends AbstractPokerLogicBase {
   PokerState gameApiStateToPokerState(Map<String, Object> gameApiState) {
 
     PokerMove previousMove = PokerMove.valueOf((String)gameApiState.get(PREVIOUS_MOVE));
-    boolean previousMoveAllIn = (boolean)gameApiState.get(PREVIOUS_MOVE_ALL_IN);
-    int numberOfPlayers = (int)gameApiState.get(NUMBER_OF_PLAYERS);
+    boolean previousMoveAllIn = (Boolean)gameApiState.get(PREVIOUS_MOVE_ALL_IN);
+    int numberOfPlayers = (Integer)gameApiState.get(NUMBER_OF_PLAYERS);
     Player whoseMove = Player.valueOf((String)gameApiState.get(WHOSE_MOVE));
     Player currentBetter = Player.valueOf((String)gameApiState.get(CURRENT_BETTER));
     BettingRound currentRound = BettingRound.valueOf((String)gameApiState.get(CURRENT_ROUND));
@@ -93,8 +93,8 @@ public class PokerLogicHelper extends AbstractPokerLogicBase {
     List<Pot> potlist = new ArrayList<Pot>();
     for(Map<String,Object> pot : gamePots) {
       potlist.add(new Pot(
-          (int)pot.get(CHIPS),
-          (int)pot.get(CURRENT_POT_BET),
+          (Integer)pot.get(CHIPS),
+          (Integer)pot.get(CURRENT_POT_BET),
           ImmutableList.copyOf(getPlayerListFromApi((List<String>)pot.get(PLAYERS_IN_POT))),
           ImmutableList.copyOf((List<Integer>) pot.get(PLAYER_BETS))));
     }

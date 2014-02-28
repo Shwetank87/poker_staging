@@ -1013,11 +1013,11 @@ public class PokerLogic extends AbstractPokerLogicBase {
     operations.add(new Set(PLAYERS_IN_HAND, ImmutableList.of(P[smallBlindPos], P[bigBlindPos])));
 
     // Assign hole cards C(2i) and C(2i+1) to player i
-    List<List<String>> holeCardList = Lists.newArrayList();
+    List<List<Integer>> holeCardList = Lists.newArrayList();
     for (int i = 0; i < numberOfPlayers; i++) {
       // We're giving C0, C1 to P0; C2, C3 to P1, so on..
       // (though in real world first card is not dealt to dealer)
-      holeCardList.add(ImmutableList.of(C + (i * 2), C + (i * 2 + 1)));
+      holeCardList.add(ImmutableList.of(i * 2, i * 2 + 1));
     }
     operations.add(new Set(HOLE_CARDS, holeCardList));
     
@@ -1050,7 +1050,8 @@ public class PokerLogic extends AbstractPokerLogicBase {
     Map<String, Object> mainPot = ImmutableMap.<String, Object>of(
         CHIPS, SMALL_BLIND + BIG_BLIND, 
         CURRENT_POT_BET, BIG_BLIND,
-        PLAYERS_IN_POT, ImmutableList.of(P[smallBlindPos], P[bigBlindPos]));
+        PLAYERS_IN_POT, ImmutableList.of(P[smallBlindPos], P[bigBlindPos]),
+        PLAYER_BETS, ImmutableList.copyOf(playerBetList));
     operations.add(new Set(POTS, ImmutableList.of(mainPot)));
     
     // shuffle the cards

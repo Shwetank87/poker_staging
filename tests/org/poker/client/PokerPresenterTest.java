@@ -46,7 +46,6 @@ import com.google.common.collect.Lists;
  * 3) makeYourMove<br>
  * 4) moveMade<br>
  */
-
 @RunWith(JUnit4.class)
 public class PokerPresenterTest extends AbstractPokerLogicTestBase {
 

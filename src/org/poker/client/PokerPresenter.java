@@ -14,7 +14,7 @@ import org.poker.client.GameApi.UpdateUI;
  */
 public class PokerPresenter {
   
-  interface View {
+  public interface View {
     /**
      * 
      * The process of making a move involves the Presenter calling following on the viewer:
@@ -61,16 +61,6 @@ public class PokerPresenter {
      * {@link #buyInDone(int)} on Presenter
      */
     void doBuyIn();
-    
-    /**
-     * Asks the view to open a card on the board
-     * 
-     * Q.) Do we really need this? 
-     * I've included this because this should involve an animation on the view's part, 
-     * but no action from the human player.
-     * So every player's view would be notified of the round end and card opening
-     */
-    void openBoardCards(List<Optional<Card>> board);
   }
   
   private final PokerLogic pokerLogic = new PokerLogic();
