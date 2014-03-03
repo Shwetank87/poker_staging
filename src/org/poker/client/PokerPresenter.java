@@ -32,6 +32,7 @@ public class PokerPresenter {
     void setPresenter(PokerPresenter pokerPresenter);
     
     void setViewerState(int numOfPlayers,
+        int turnIndex,
         BettingRound round,
         List<Integer> playerBets,
         List<Pot> pots,
@@ -41,6 +42,7 @@ public class PokerPresenter {
     
     void setPlayerState(int numOfPlayers,
         int myIndex,
+        int turnIndex,
         BettingRound round,
         List<Integer> playerBets,
         List<Pot> pots, 
@@ -48,6 +50,13 @@ public class PokerPresenter {
         List<List<Optional<Card>>> holeCards,
         List<Optional<Card>> board);
     
+    void setEndGameState(int numOfPlayers,
+        BettingRound round,
+        List<Integer> playerBets,
+        List<Pot> pots,
+        List<Integer> playerChips,
+        List<List<Optional<Card>>> holeCards,
+        List<Optional<Card>> board);    
     /**
      * Asks the Player to make his move 
      * The user can make his move {Bet, Fold, Call or Raise} by calling
@@ -90,6 +99,13 @@ public class PokerPresenter {
         Optional.of(Player.values()[playerIndex]) : Optional.<Player>absent();
     playerIdToTokensInPot = updateUI.getPlayerIdToNumberOfTokensInPot();
     
+    // Check if the playerIdToTokensInPot is empty
+    if (playerIdToTokensInPot.isEmpty()){
+      for(int id : playerIdList) {
+        playerIdToTokensInPot.put(id, 0);
+      }
+    }
+    
     // Check if this is an initial setup move
     if (updateUI.getState().isEmpty()) {
       // Check that this is not an outside viewer
@@ -107,6 +123,7 @@ public class PokerPresenter {
     }
     
     pokerState = pokerLogicHelper.gameApiStateToPokerState(updateUI.getState());
+    int turnIndex = pokerState.getWhoseMove().ordinal();
     
     BettingRound round = pokerState.getCurrentRound();
     List<Integer> playerBets = pokerState.getPlayerBets();
@@ -121,7 +138,13 @@ public class PokerPresenter {
     
     // Check if this is a third person viewer
     if (updateUI.isViewer()) {
-      view.setViewerState(numOfPlayers, round, playerBets, pots, playerChips, holeCardList, board);
+      if (round == BettingRound.END_GAME) {
+        view.setEndGameState(numOfPlayers, round, playerBets, pots, playerChips, holeCardList, board);
+      }
+      if (round != BettingRound.SHOWDOWN) {
+        view.setViewerState(numOfPlayers, turnIndex, round, playerBets, pots, playerChips,
+            holeCardList, board);
+      }
       return;
     }
     // Check if this is an AI player
@@ -130,18 +153,23 @@ public class PokerPresenter {
       return;
     }
     
-    view.setPlayerState(numOfPlayers, playerIndex, round, playerBets, pots, playerChips,
-        holeCardList, board);
-    
-    //TODO: check if open board call on View is required
-    
-    if(isMyTurn()) {
-      if(round != BettingRound.SHOWDOWN) {
-        view.makeYourMove();
+    if (round == BettingRound.SHOWDOWN) {
+      if (isMyTurn()) {
+          container.sendMakeMove(pokerLogic.doEndGameMove(pokerState, playerIdList));
       }
-      else {
-        container.sendMakeMove(pokerLogic.doEndGameMove(pokerState, playerIdList));
-      }
+      return;
+    }
+    
+    if (round == BettingRound.END_GAME) {
+      view.setEndGameState(numOfPlayers, round, playerBets, pots, playerChips, holeCardList, board);
+      return;
+    }
+    
+    view.setPlayerState(numOfPlayers, playerIndex, turnIndex, round, playerBets, pots, playerChips,
+          holeCardList, board);
+    
+    if(isMyTurn() && round != BettingRound.END_GAME) {
+      view.makeYourMove();
     }
   }
 
@@ -168,7 +196,7 @@ public class PokerPresenter {
    */
   private boolean buyInSuccessfullyDone() {
     int myPlayerIndex = myPlayer.get().ordinal();
-    return playerIdToTokensInPot.get(playerIdList.get(myPlayerIndex)) > 0;
+    return playerIdToTokensInPot.get(playerIdList.get(myPlayerIndex)) != 0;
   }
   
   /**
@@ -211,7 +239,7 @@ public class PokerPresenter {
    */
   public void buyInDone(int amount) {
     int myPlayerId = playerIdList.get(myPlayer.get().ordinal());
-    container.sendMakeMove(pokerLogic.getInitialBuyInMove(myPlayerId, amount));
+    container.sendMakeMove(pokerLogic.getInitialBuyInMove(myPlayerId, amount, playerIdToTokensInPot));
   }
   
   /**

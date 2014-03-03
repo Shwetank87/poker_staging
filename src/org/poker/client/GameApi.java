@@ -37,33 +37,27 @@ public final class GameApi {
   }
 
   /**
-   * A container for games that iterates over all the players for every MakeMove received.
-   * The container will first call UpdateUI for a viewer,
-   * then (after next() is called) for the first player, then the second player, etc.
+   * A container for games that can iterates over all the players and send them Game API messages.
    */
   public static class IteratingPlayerContainer implements Container {
     private final Game game;
     private final List<Map<String, Object>> playersInfo = Lists.newArrayList();
     private final List<Integer> playerIds;
     private int updateUiPlayerId = 0;
-    private GameState gameState;
+    private GameState gameState = new GameState();
     private GameState lastGameState = null;
     private List<Operation> lastMove = null;
     private int lastMovePlayerId = 0;
-    
 
     public IteratingPlayerContainer(Game game, int numberOfPlayers) {
       this.game = game;
       List<Integer> playerIds = Lists.newArrayList();
-      Map<Integer, Integer> playerIdToNumberOfTokensInPot = Maps.newHashMap();
       for (int i = 0; i < numberOfPlayers; i++) {
         int playerId = 42 + i;
         playerIds.add(playerId);
         playersInfo.add(ImmutableMap.<String, Object>of(PLAYER_ID, playerId));
-        playerIdToNumberOfTokensInPot.put(playerId, 0);
       }
       this.playerIds = ImmutableList.copyOf(playerIds);
-      gameState = new GameState(playerIdToNumberOfTokensInPot);
     }
 
     public List<Integer> getPlayerIds() {
@@ -107,30 +101,17 @@ public final class GameApi {
   }
 
   public static class GameState {
-    private final Map<String, Object> state;
-    private final Map<String, Object> visibleTo;
-    private final Map<Integer, Integer> playerIdToNumberOfTokensInPot;
+    private final Map<String, Object> state = Maps.newHashMap();
+    private final Map<String, Object> visibleTo = Maps.newHashMap();
+    private Map<Integer, Integer> playerIdToNumberOfTokensInPot = Maps.newHashMap();
 
-    
-    public GameState() {
-      state = Maps.newHashMap();
-      visibleTo = Maps.newHashMap();
-      playerIdToNumberOfTokensInPot = Maps.newHashMap();
-    }
-    
-    public GameState(Map<Integer, Integer> playerIdToNumberOfTokensInPot) {
-      this();
-      this.playerIdToNumberOfTokensInPot.putAll(playerIdToNumberOfTokensInPot);
-    }
-    
     public GameState copy() {
       GameState result = new GameState();
-      result.playerIdToNumberOfTokensInPot.putAll(playerIdToNumberOfTokensInPot);
       result.state.putAll(state);
       result.visibleTo.putAll(visibleTo);
       return result;
     }
-    
+
     public Map<Integer, Integer> getPlayerIdToNumberOfTokensInPot() {
       return playerIdToNumberOfTokensInPot;
     }
@@ -193,8 +174,8 @@ public final class GameApi {
           visibleTo.put(toKey, oldVisibleTo.get(fromKey));
         }
       } else if (operation instanceof AttemptChangeTokens) {
-        AttemptChangeTokens attemptChangeTokens = (AttemptChangeTokens) operation;
-        playerIdToNumberOfTokensInPot.putAll(attemptChangeTokens.getPlayerIdToNumberOfTokensInPot());
+        playerIdToNumberOfTokensInPot =
+            ((AttemptChangeTokens) operation).getPlayerIdToNumberOfTokensInPot();
       }
     }
 

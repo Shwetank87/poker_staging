@@ -3,7 +3,7 @@ package org.poker.client;
 
 public enum BettingRound {
   
-  PRE_FLOP, FLOP, TURN, RIVER, SHOWDOWN;
+  PRE_FLOP, FLOP, TURN, RIVER, SHOWDOWN, END_GAME;
   
   private static final BettingRound[] VALUES = values();
   

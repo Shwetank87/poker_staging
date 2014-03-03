@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.poker.client.BettingRound;
 import org.poker.client.Card;
+import org.poker.client.Player;
 import org.poker.client.PokerMove;
 import org.poker.client.PokerPresenter;
 import org.poker.client.Pot;
@@ -31,6 +32,9 @@ import com.google.gwt.user.client.ui.Widget;
 public class PokerGraphics extends Composite implements PokerPresenter.View {
   public interface PokerGraphicsUiBinder extends UiBinder<Widget, PokerGraphics> {
   }
+  
+  private static final boolean AUTO_BUY_IN = true;
+  private static final int AUTO_BUY_IN_VALUE = 10000;
   
   @UiField
   AbsolutePanel pokerTable;
@@ -158,6 +162,15 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
   
   @Override
   public void doBuyIn() {
+    btnFold.setEnabled(false);
+    btnBet.setEnabled(false);
+    txtAmount.setEnabled(false);
+    
+    if (AUTO_BUY_IN) {
+      presenter.buyInDone(AUTO_BUY_IN_VALUE);
+      return;
+    }
+    
     new PopupEnterValue("Enter buy-in amount", new PopupEnterValue.ValueEntered() {
       @Override
       public void setValue(int value) {
@@ -167,7 +180,7 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
   }
 
   @Override
-  public void setViewerState(int numOfPlayers, BettingRound round,
+  public void setViewerState(int numOfPlayers, int turnIndex, BettingRound round,
       List<Integer> playerBets, List<Pot> pots, List<Integer> playerChips,
       List<List<Optional<Card>>> holeCards, List<Optional<Card>> board) {
     
@@ -180,6 +193,12 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
       infoPanelArr[i].clear();
       infoPanelArr[i].add(new Label("Chips: " + playerChips.get(i)));
       infoPanelArr[i].add(new Label("Bet: " + playerBets.get(i)));
+      if (i == turnIndex) {
+        holeCardPanelArr[i].setStyleName("currentTurnHoleCardPanel");
+      }
+      else {
+        holeCardPanelArr[i].setStyleName("holeCardPanel");
+      }
     }
     placeCards(communityCards, createCardImages(board));
     for (int i = 0; i < pots.size(); i++) {
@@ -197,11 +216,11 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     //TODO: handle remaining state
   }
 
+  
   @Override
-  public void setPlayerState(int numOfPlayers, int myIndex, BettingRound round,
+  public void setPlayerState(int numOfPlayers, int myIndex, int turnIndex, BettingRound round,
       List<Integer> playerBets, List<Pot> pots, List<Integer> playerChips,
       List<List<Optional<Card>>> holeCards, List<Optional<Card>> board) {
-    
     currentBet = 0;
     myChips = playerChips.get(myIndex);
     myCurrentBet = playerBets.get(myIndex);
@@ -211,6 +230,12 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
       infoPanelArr[i].clear();
       infoPanelArr[i].add(new Label("Chips: " + playerChips.get(i)));
       infoPanelArr[i].add(new Label("Bet: " + playerBets.get(i)));
+      if (i == turnIndex) {
+        holeCardPanelArr[i].setStyleName("currentTurnHoleCardPanel");
+      }
+      else {
+        holeCardPanelArr[i].setStyleName("holeCardPanel");
+      }
     }
     placeCards(communityCards, createCardImages(board));
     
@@ -228,6 +253,47 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     //TODO: handle remaining state
   }
   
+  @Override
+  public void setEndGameState(int numOfPlayers, BettingRound round,
+      List<Integer> playerBets, List<Pot> pots, List<Integer> playerChips,
+      List<List<Optional<Card>>> holeCards, List<Optional<Card>> board) {
+    
+    currentBet = 0;
+    myChips = 0;
+    myCurrentBet = 0;
+    
+    for (int i = 0; i < numOfPlayers; i++) {
+      placeCards(holeCardPanelArr[i], createCardImages(holeCards.get(i)));
+      infoPanelArr[i].clear();
+      infoPanelArr[i].add(new Label("Chips: " + playerChips.get(i)));
+    }
+    placeCards(communityCards, createCardImages(board));
+    
+    for (int i = 0; i < pots.size(); i++) {
+      Pot pot = pots.get(i);
+      List<Player> winners = pot.getPlayersInPot();
+      StringBuilder sb = new StringBuilder();
+      for (int j = 0; j < winners.size(); j++) {
+        sb.append(winners.get(j));
+        if (j == winners.size() - 2) {
+          if (winners.size() > 1) {
+            sb.append(" and ");
+          }
+        }
+        else if (j < winners.size() - 2) {
+          sb.append(", ");
+        }
+      }
+      potInfoPanel.clear();
+      potInfoPanel.add(new Label("Pot" + (i + 1) +
+          " -- Chips: " + pot.getChips() +
+          " | Won by: " + sb.toString()));
+      }
+    btnFold.setEnabled(false);
+    btnBet.setEnabled(false);
+    txtAmount.setEnabled(false);
+  }
+
   @UiHandler("btnFold")
   void onClickFoldBtn(ClickEvent e) {
     //disableClicks();
@@ -253,7 +319,7 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     
     boolean isAllIn = (amount == myChips);
     
-    if (currentBet == 0 && amount == 0) {
+    if (currentBet - myCurrentBet == 0 && amount == 0) {
       presenter.moveMade(PokerMove.CHECK, 0);
     }
     else if (currentBet == 0 && amount > 0) {
@@ -276,5 +342,6 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     btnBet.setEnabled(true);
     txtAmount.setEnabled(true);
   }
+
   
 }
