@@ -19,7 +19,6 @@ import org.poker.client.GameApi.Shuffle;
 import org.poker.client.GameApi.VerifyMove;
 import org.poker.client.GameApi.VerifyMoveDone;
 
-import com.google.appengine.labs.repackaged.com.google.common.collect.ImmutableMapBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
