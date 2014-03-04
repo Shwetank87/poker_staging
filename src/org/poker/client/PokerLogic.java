@@ -554,6 +554,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
               (List<String>)finalApiPot.get(PLAYERS_IN_POT), P[playerIndex]),
           PLAYER_BETS, createNewList(playerIds.size(), Integer.valueOf(0))));
     }
+    operations.add(new Set(POTS, newPots));
 
     return operations;
   }
@@ -576,7 +577,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
     int playerChips = lastState.getPlayerChips().get(playerIndex);
     
     int raiseByAmount = existingPlayerBet + additionalAmount - totalRequiredBet; 
-    check(existingPlayerBet + additionalAmount <= playerChips,
+    check(additionalAmount <= playerChips,
         "Cannot raise more than existing chips.");
     boolean isAllIn = ((existingPlayerBet + additionalAmount) == playerChips);
     check(isAllIn || raiseByAmount >= totalRequiredBet,
