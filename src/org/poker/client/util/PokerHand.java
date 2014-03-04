@@ -2,7 +2,9 @@ package org.poker.client.util;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.poker.client.Card;
 
@@ -36,8 +38,16 @@ public class PokerHand {
   
   private void sortRankValues() {
     Arrays.sort(rankValues, Collections.reverseOrder());
-    if(rankValues.equals(new Integer[]{14, 5, 4, 3, 2})) {
-      rankValues = new Integer[]{5, 4, 3, 2, 1};
+    if(rankValues[0] == 14 &&
+        rankValues[1] == 5 &&
+        rankValues[2] == 4 &&
+        rankValues[3] == 3 &&
+        rankValues[4] == 2) {
+      rankValues = new Integer[]{Integer.valueOf(5),
+          Integer.valueOf(4),
+          Integer.valueOf(3),
+          Integer.valueOf(2),
+          Integer.valueOf(1)};
     }
   }
   
@@ -152,7 +162,9 @@ public class PokerHand {
   }
   
   private boolean straight() {
-    return rankValues[0] - rankValues[4] == 4;
+    Set<Integer> rankSet = new HashSet();
+    rankSet.addAll(Arrays.asList(rankValues));
+    return rankValues[0] - rankValues[4] == 4 && rankSet.size() == 5;
   }
   
   private int kind(int n) {

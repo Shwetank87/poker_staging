@@ -35,26 +35,26 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
     
     // Buy-in by P0
     startingChips = getStartingChips(2000, 0, 0, 0);
-    List<Operation> buyInOperaitions = pokerLogic.getInitialBuyInMove(p0_id, 2000);
+    List<Operation> buyInOperaitions = pokerLogic.getInitialBuyInMove(p0_id, 2000, startingChips);
     VerifyMove verifyMove = move(
         p0_id, emptyState, buyInOperaitions, playersInfo_3_players, startingChips);
     assertMoveOk(verifyMove);
     
     // Buy-in by P1
     startingChips = getStartingChips(2000, 4000, 0, 0);
-    buyInOperaitions = pokerLogic.getInitialBuyInMove(p1_id, 4000);
+    buyInOperaitions = pokerLogic.getInitialBuyInMove(p1_id, 4000, startingChips);
     verifyMove = move(p1_id, emptyState, buyInOperaitions, playersInfo_3_players, startingChips);
     assertMoveOk(verifyMove);
     
     // Buy-in by P2
     startingChips = getStartingChips(2000, 4000, 1000, 0);
-    buyInOperaitions = pokerLogic.getInitialBuyInMove(p2_id, 1000);
+    buyInOperaitions = pokerLogic.getInitialBuyInMove(p2_id, 1000, startingChips);
     verifyMove = move(p2_id, emptyState, buyInOperaitions, playersInfo_3_players, startingChips);
     assertMoveOk(verifyMove);
     
     // Buy-in by P3
     startingChips = getStartingChips(2000, 4000, 1000, 2000);
-    buyInOperaitions = pokerLogic.getInitialBuyInMove(p3_id, 2000);
+    buyInOperaitions = pokerLogic.getInitialBuyInMove(p3_id, 2000, startingChips);
     verifyMove = move(p3_id, emptyState, buyInOperaitions, playersInfo_3_players, startingChips);
     assertMoveOk(verifyMove);
   }

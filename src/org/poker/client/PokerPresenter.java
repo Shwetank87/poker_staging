@@ -37,6 +37,7 @@ public class PokerPresenter {
         List<Integer> playerBets,
         List<Pot> pots,
         List<Integer> playerChips,
+        List<Player> playersInHand,
         List<List<Optional<Card>>> holeCards,
         List<Optional<Card>> board);
     
@@ -47,6 +48,7 @@ public class PokerPresenter {
         List<Integer> playerBets,
         List<Pot> pots, 
         List<Integer> playerChips,
+        List<Player> playersInHand,
         List<List<Optional<Card>>> holeCards,
         List<Optional<Card>> board);
     
@@ -55,6 +57,7 @@ public class PokerPresenter {
         List<Integer> playerBets,
         List<Pot> pots,
         List<Integer> playerChips,
+        List<Player> playersInHand,
         List<List<Optional<Card>>> holeCards,
         List<Optional<Card>> board);    
     /**
@@ -129,6 +132,7 @@ public class PokerPresenter {
     List<Integer> playerBets = pokerState.getPlayerBets();
     List<Pot> pots = pokerState.getPots();
     List<Integer> playerChips = pokerState.getPlayerChips();
+    List<Player> playersInHand = pokerState.getPlayersInHand();
     List<Optional<Card>> board = cardIndexToOptionalList(pokerState.getBoard());
     List<List<Optional<Card>>> holeCardList = Lists.newArrayList();
     // Get List of hole cards
@@ -139,11 +143,12 @@ public class PokerPresenter {
     // Check if this is a third person viewer
     if (updateUI.isViewer()) {
       if (round == BettingRound.END_GAME) {
-        view.setEndGameState(numOfPlayers, round, playerBets, pots, playerChips, holeCardList, board);
+        view.setEndGameState(numOfPlayers, round, playerBets, pots, playerChips, playersInHand,
+            holeCardList, board);
       }
       if (round != BettingRound.SHOWDOWN) {
         view.setViewerState(numOfPlayers, turnIndex, round, playerBets, pots, playerChips,
-            holeCardList, board);
+            playersInHand, holeCardList, board);
       }
       return;
     }
@@ -161,12 +166,13 @@ public class PokerPresenter {
     }
     
     if (round == BettingRound.END_GAME) {
-      view.setEndGameState(numOfPlayers, round, playerBets, pots, playerChips, holeCardList, board);
+      view.setEndGameState(numOfPlayers, round, playerBets, pots, playerChips, playersInHand,
+          holeCardList, board);
       return;
     }
     
     view.setPlayerState(numOfPlayers, playerIndex, turnIndex, round, playerBets, pots, playerChips,
-          holeCardList, board);
+        playersInHand, holeCardList, board);
     
     if(isMyTurn() && round != BettingRound.END_GAME) {
       view.makeYourMove();

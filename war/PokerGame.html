@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <title>Cheat game</title>
+    <title>Poker</title>
     <script type="text/javascript" language="javascript" src="poker_game/poker_game.nocache.js"></script>
     <style>
 	    .pokerTablePanel {
@@ -11,22 +11,42 @@
 	      background-position: center center;
 	      background-size: 100%;
       }
-      .imgCardContainer {
-        overflow:hidden;
-        width: 36px;
-        height: 50px;
+      .playerInfoPanel {
+        margin: 4px;
       }
       
-		  .imgContainer {
-		    overflow:hidden;
-		    width: 73px;
-		    height: 97px;
-		  }
-		  .imgShortContainer {
-		    overflow:hidden;
-		    width: 15px;
-		    height: 97px;
-		  }
+      .cardImage {
+        width: 55px;
+        height: 75px;
+      }
+      .imgCardContainer {
+        overflow:hidden;
+        width: 55px;
+        height: 75px;
+      }
+      .imgShortCardContainer {
+        overflow:hidden;
+        width: 20px;
+        height: 75px;
+      }
+      .currentTurnHoleCardPanel {
+        border-style: solid;
+        border-color: yellow;
+        border-width: 2px;
+      }
+      .foldedHoleCardPanel {
+        position:relative;
+        display:block;
+      }
+      .overlay {
+        position:absolute;
+		    top:0px;
+		    left:0px;
+		    bottom:0px;
+		    right:0px;
+		    background-color:rgba(0, 0, 0, 0.6);
+      }
+      
     </style>
   </head>
   <body>

@@ -230,7 +230,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    */
   List<Operation> doFoldMove(PokerState lastState, List<Integer> playerIds) {
     
-    if (isNewRoundStarting(lastState, PokerMove.FOLD)) {
+    if (isNewRoundStarting(lastState, PokerMove.FOLD, 0)) {
       return doNewRoundAfterFoldMove(lastState, playerIds);
     }
     
@@ -288,7 +288,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    */
   List<Operation> doCheckMove(PokerState lastState, List<Integer> playerIds) {
     
-    if (isNewRoundStarting(lastState, PokerMove.CHECK)) {
+    if (isNewRoundStarting(lastState, PokerMove.CHECK, 0)) {
       return doNewRoundAfterCheckMove(lastState , playerIds);
     }
     
@@ -315,7 +315,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
    */
   List<Operation> doCallMove(PokerState lastState, List<Integer> playerIds, int additionalAmount) {
     
-    if (isNewRoundStarting(lastState, PokerMove.CALL)) {
+    if (isNewRoundStarting(lastState, PokerMove.CALL, additionalAmount)) {
       return doNewRoundAfterCallMove(lastState, playerIds, additionalAmount);
     }
     
@@ -434,7 +434,14 @@ public class PokerLogic extends AbstractPokerLogicBase {
       int remainingPotBet = requiredPotBet - existingPotBet;
       
       if(!potSplitDone && remainingAmount <= remainingPotBet) {
-        //Need to split this pot.
+        // Possibly need to split this pot.
+        boolean isSplitRequired = isSplitRequired(pots, i, remainingAmount, remainingPotBet);
+        
+        int lastRoundPotChips = pot.getChips();
+        for (int playerBet : pot.getPlayerBets()) {
+          lastRoundPotChips -= playerBet;
+        }
+        
         int requiredPotBet1 = existingPotBet + remainingAmount;
         int requiredPotBet2 = requiredPotBet - (remainingAmount + existingPotBet);
         List<Integer> newPlayerBets1 = Lists.newArrayList();
@@ -445,26 +452,30 @@ public class PokerLogic extends AbstractPokerLogicBase {
             pot.getPlayerBets(), Integer.valueOf(existingPotBet + remainingAmount), playerIndex);
         for(int playerBet : playerBets) {
           int playerBet1 = playerBet > requiredPotBet1 ? requiredPotBet1 : playerBet;
-          int playerBet2 = playerBet > requiredPotBet1 ? (playerBet - requiredPotBet) : 0;
+          int playerBet2 = playerBet > requiredPotBet1 ? (playerBet - requiredPotBet1) : 0;
           newPlayerBets1.add(playerBet1);
           newPlayerBets2.add(playerBet2);
           chips1 += playerBet1;
           chips2 += playerBet2;
         }
-        check(pot.getChips() == chips1 + chips2, "Invalid pot split.");
+        check(pot.getChips() + remainingAmount == 
+            lastRoundPotChips + chips1 + chips2, "Invalid pot split.");
         newPots.add(ImmutableMap.<String, Object>of(
-            CHIPS, chips1,
+            CHIPS, lastRoundPotChips + chips1,
             CURRENT_POT_BET, requiredPotBet1,
             PLAYERS_IN_POT, playersInPot,
             PLAYER_BETS, newPlayerBets1));
-        newPots.add(ImmutableMap.<String, Object>of(
-            CHIPS, chips2,
-            CURRENT_POT_BET, requiredPotBet2,
-            PLAYERS_IN_POT, removeFromList(playersInPot, P[playerIndex]),
-            PLAYER_BETS, newPlayerBets2));
+        if (isSplitRequired) {
+          newPots.add(ImmutableMap.<String, Object>of(
+              CHIPS, chips2,
+              CURRENT_POT_BET, requiredPotBet2,
+              PLAYERS_IN_POT, removeFromList(playersInPot, P[playerIndex]),
+              PLAYER_BETS, newPlayerBets2));
+        }
+        potSplitDone = true;
       }
       else {
-        if(potSplitDone) {
+        if (potSplitDone) {
           newPots.add(ImmutableMap.<String, Object>of(
               CHIPS, pot.getChips(),
               CURRENT_POT_BET, pot.getCurrentPotBet(),
@@ -484,6 +495,35 @@ public class PokerLogic extends AbstractPokerLogicBase {
     }
     
     return newPots;
+  }
+
+  /**
+   * Check if the current pot should be split
+   * 
+   * @param pots
+   * @param index
+   * @param remainingAmount
+   * @param remainingPotBet
+   * @return
+   */
+  private boolean isSplitRequired(
+      List<Pot> pots, int index, int remainingAmount, int remainingPotBet) {
+    
+    if (remainingAmount < remainingPotBet) {
+      return true;
+    }
+    else if (remainingAmount > remainingPotBet) {
+      return false;
+    }
+    else {
+      // Exact match with existing pot. Check if new pot is required.
+      if (pots.size() - 1 == index && pots.get(index).getChips() > 0) {
+        // This was the last pot, so we need a new empty pot (if not already empty)
+        return true;
+      }
+      // Not the last pot, so no point creating an empty pot here
+      return false;
+    }
   }
 
   /**
@@ -642,15 +682,16 @@ public class PokerLogic extends AbstractPokerLogicBase {
             CURRENT_POT_BET, requiredPotBet + raiseByAmount,
             PLAYERS_IN_POT, addToList(helper.getApiPlayerList(finalPot.getPlayersInPot()), P[playerIndex]),
             PLAYER_BETS, newPlayerBetsInFinalPot));
-      }
-      if(isAllIn) {
-        Map<String, Object> finalPot = newPots.get(newPots.size() - 1);
-        newPots.add(ImmutableMap.<String, Object>of(
-            CHIPS, 0,
-            CURRENT_POT_BET, 0,
-            PLAYERS_IN_POT, removeFromList(
-                (List<String>)finalPot.get(PLAYERS_IN_POT), P[playerIndex]),
-            PLAYER_BETS, createNewList(playerIds.size(), Integer.valueOf(0))));
+      
+        if(isAllIn) {
+          Map<String, Object> lastApiPot = newPots.get(newPots.size() - 1);
+          newPots.add(ImmutableMap.<String, Object>of(
+              CHIPS, 0,
+              CURRENT_POT_BET, 0,
+              PLAYERS_IN_POT, removeFromList(
+                  (List<String>)lastApiPot.get(PLAYERS_IN_POT), P[playerIndex]),
+              PLAYER_BETS, createNewList(playerIds.size(), Integer.valueOf(0))));
+        }
       }
     }
     operations.add(new Set(POTS, newPots));
@@ -660,35 +701,56 @@ public class PokerLogic extends AbstractPokerLogicBase {
  
   /**
    * Returns true if the game ends after this move because all other 
-   * players are all-in. 
+   * players are all-in or have folded.
    * 
    * @param lastState
    * @param move
    * @return
    */
-  private boolean isEveryoneAllIn(PokerState lastState, PokerMove move) {
+  private boolean hasGameEnded(PokerState lastState, PokerMove move, int additionalAmount) {
     // TODO fix next turn in new round methods
-    if(move == PokerMove.BET || move == PokerMove.RAISE) {
+    if (move == PokerMove.BET || move == PokerMove.RAISE) {
       //Game cannot get over after a bet or a raise
       return false;
     }
-    if(lastState.getCurrentRound() == BettingRound.RIVER) {
+    if (lastState.getCurrentRound() == BettingRound.RIVER) {
       //Method doNewRoundAfterXyzMove() will handle this scenario
       return false;
     }
     List<Player> playersInHand = lastState.getPlayersInHand();
+    if (playersInHand.size() == 2 && move == PokerMove.FOLD) {
+      // Just 1 player left
+      return true;
+    } 
+    int playersLeft = 0;
+    Player lastPlayer = null;
+    int requiredBet = calculateLastRequiredBet(lastState);
     for(Player player : playersInHand) {
-      if(player == lastState.getWhoseMove()) {
+      boolean isCurrentPlayer = player == lastState.getWhoseMove();
+      int playerChipsLeft = lastState.getPlayerChips().get(player.ordinal());
+      if (isCurrentPlayer) {
+        playerChipsLeft -= additionalAmount;
+      }
+      if(isCurrentPlayer && move == PokerMove.FOLD) {
+        // Don't count because player folded
         continue;
       }
-      if(lastState.getPlayerChips().get(player.ordinal()) == 0) {
+      if(playerChipsLeft == 0) {
         // This player is all-in, move on.
         continue;
       }
-      // Found another player who's not all-in
+      // Found another player who's not all-in and in the game
+      playersLeft++;
+      lastPlayer = player;
+      if (playersLeft > 1) {
+        return false;
+      }
+    }
+    // Check if player left has matched the current bet (this can't be current player).
+    if (playersLeft == 1 && lastState.getPlayerBets().get(lastPlayer.ordinal()) < requiredBet) {
+      // Last player left is still to act
       return false;
     }
-    // All other players were all-in, so the game is over
     return true;
   }
   
@@ -706,9 +768,8 @@ public class PokerLogic extends AbstractPokerLogicBase {
     int numOfPlayers = lastState.getNumberOfPlayers();
     int playerIndex = lastState.getWhoseMove().ordinal();
     BettingRound nextRound = lastState.getCurrentRound().getNextRound();
-    boolean noPlayersLeft = isEveryoneAllIn(lastState, PokerMove.FOLD);
+    boolean noPlayersLeft = hasGameEnded(lastState, PokerMove.FOLD, 0);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
-    noPlayersLeft = noPlayersLeft ? true : hasEveryoneFolded(lastState.getPlayersInHand(), PokerMove.FOLD);
     // If game is ending, next turn will be set to the same player
     int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNewRoundNextTurnIndex(
         lastState, PokerMove.FOLD);
@@ -804,7 +865,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
     
     BettingRound nextRound = lastState.getCurrentRound().getNextRound();
     int playerIndex = lastState.getWhoseMove().ordinal();
-    boolean noPlayersLeft = isEveryoneAllIn(lastState, PokerMove.CHECK);
+    boolean noPlayersLeft = hasGameEnded(lastState, PokerMove.CHECK, 0);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
     //If game is ending, next turn will be set to the same player
     int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNewRoundNextTurnIndex(
@@ -879,7 +940,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
     int requiredBetAmount = calculateLastRequiredBet(lastState);
     int currentPlayerChips = lastState.getPlayerChips().get(playerIndex);
     BettingRound nextRound = lastState.getCurrentRound().getNextRound();
-    boolean noPlayersLeft = isEveryoneAllIn(lastState, PokerMove.CALL);
+    boolean noPlayersLeft = hasGameEnded(lastState, PokerMove.CALL, additionalAmount);
     boolean isGameEnding = (nextRound == BettingRound.SHOWDOWN);
     //If game is ending, next turn will be set to the same player
     int nextTurnIndex = (isGameEnding || noPlayersLeft) ? playerIndex : getNewRoundNextTurnIndex(
@@ -968,19 +1029,13 @@ public class PokerLogic extends AbstractPokerLogicBase {
    * 
    * @param lastState
    * @param previousMove
+   * @param additionalAmount
    * @return
    */
   private boolean isNewRoundStarting(PokerState lastState,
-      PokerMove previousMove) {
+      PokerMove previousMove, int additionalAmount) {
     if (previousMove == PokerMove.BET || previousMove == PokerMove.RAISE) {
       return false;
-    }
-    
-    // If everyone has folded then a new round starts
-    if ( previousMove == PokerMove.FOLD) {
-      if (lastState.getPlayersInHand().size() == 2) {
-        return true;
-      }
     }
     
     // If its a big blind move in preflop and he checks, round ends
@@ -991,22 +1046,25 @@ public class PokerLogic extends AbstractPokerLogicBase {
       return true;
     }
     
+    // If there is no one else left to act, round will end (so will the game)
+    if(hasGameEnded(lastState, previousMove, additionalAmount)) {
+      return true;
+    }
+    
     boolean isNewRoundStarting = false;
     List<Player> playersInHand = lastState.getPlayersInHand();
     int currentBetterIndex = playersInHand.indexOf(lastState.getCurrentBetter());
     int lastPlayerListIndex = playersInHand.indexOf(lastState.getWhoseMove());
-    for (int i=1; i<playersInHand.size(); i++) {
+    for (int i = 1; i < playersInHand.size(); i++) {
       int listIndex = (i + lastPlayerListIndex) % playersInHand.size();
+      int playerIndex = playersInHand.get(listIndex).ordinal();
       if (listIndex == currentBetterIndex) {
         // Reached the current better. The round will end unless its preflop bigblind bet.        
         isNewRoundStarting = true;
         break;
       }
-      if (lastState.getPlayerChips().get(i) == 0) {
+      if (lastState.getPlayerChips().get(playerIndex) == 0) {
         // This player is all-in. Continue to next player
-        continue;
-      }
-      if (listIndex == lastPlayerListIndex && previousMove == PokerMove.FOLD) {
         continue;
       }
       break;
@@ -1289,13 +1347,14 @@ public class PokerLogic extends AbstractPokerLogicBase {
     int lastPlayerListIndex = playersInHand.indexOf(lastState.getWhoseMove());
     for(int i=1; i<playersInHand.size(); i++) {
       int listIndex = (i + lastPlayerListIndex) % playersInHand.size();
-      if(lastState.getPlayerChips().get(i) == 0) {
+      int playerIndex = playersInHand.get(listIndex).ordinal();
+      if(lastState.getPlayerChips().get(playerIndex) == 0) {
         // This player is all-in. Continue to next player
         continue;
       }
-      return playersInHand.get(listIndex).ordinal();
+      return playerIndex;
     }
-    // Code should never reach here if our assumptino was correct
+    // Code should never reach here if our assumption was correct
     throw new IllegalStateException("Next turn not found");
   }
   

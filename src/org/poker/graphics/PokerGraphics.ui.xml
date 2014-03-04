@@ -7,71 +7,71 @@
 	  
 	    <g:at left='360' top='195'>
 	      <g:VerticalPanel>
-	        <g:HorizontalPanel height="50px" ui:field="communityCards" />
-	        <g:VerticalPanel height="100px" ui:field="potInfoPanel" />
+	        <g:HorizontalPanel height="75px" ui:field="communityCards" />
+	        <g:VerticalPanel ui:field="potInfoPanel" />
 	      </g:VerticalPanel>
 	    </g:at>
 	    
 	    <g:at left='700' top='30'>
 	      <g:VerticalPanel height="100px" ui:field="seat1">
-	        <g:HorizontalPanel height="50px" ui:field="holeCards1" />
-          <g:VerticalPanel height="50px" ui:field="info1" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards1" />
+          <g:VerticalPanel ui:field="info1" />
 	      </g:VerticalPanel>
 	    </g:at>
 	    
 	    <g:at left='750' top='150'>
 	      <g:HorizontalPanel height="100px" ui:field="seat2">
-	        <g:VerticalPanel height="50px" ui:field="info2" />
-	        <g:HorizontalPanel height="50px" ui:field="holeCards2" />
+	        <g:VerticalPanel ui:field="info2" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards2" />
 	      </g:HorizontalPanel>
 	    </g:at>
 	    
 	    <g:at left='750' top='280'>
 	      <g:HorizontalPanel height="100px" ui:field="seat3">
-          <g:VerticalPanel height="50px" ui:field="info3" />
-	        <g:HorizontalPanel height="50px" ui:field="holeCards3" />
+          <g:VerticalPanel ui:field="info3" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards3" />
 	      </g:HorizontalPanel>
 	    </g:at>
 	    
 	    <g:at left='700' top='360'>
 	      <g:VerticalPanel height="100px" ui:field="seat4">
-	        <g:VerticalPanel height="50px" ui:field="info4" />
-	        <g:HorizontalPanel height="50px" ui:field="holeCards4" />
+	        <g:VerticalPanel ui:field="info4" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards4" />
 	      </g:VerticalPanel>
 	    </g:at>
 	    
-	    <g:at left='410' top='390'>
+	    <g:at left='410' top='360'>
 	      <g:VerticalPanel height="100px" ui:field="seat5">
-	        <g:VerticalPanel height="50px" ui:field="info5" />
-	        <g:HorizontalPanel height="50px" ui:field="holeCards5" />
+	        <g:VerticalPanel ui:field="info5" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards5" />
 	      </g:VerticalPanel>
 	    </g:at>
 	    
 	    <g:at left='130' top='360'>
 	      <g:VerticalPanel height="100px" ui:field="seat6">
-	        <g:VerticalPanel height="50px" ui:field="info6" />
+	        <g:VerticalPanel ui:field="info6" />
 	        <g:HorizontalPanel height="50px" ui:field="holeCards6" />
 	      </g:VerticalPanel>
 	    </g:at>
 	    
 	    <g:at left='30' top='280'>
 	      <g:HorizontalPanel height="100px" ui:field="seat7">
-	        <g:HorizontalPanel height="50px" ui:field="holeCards7" />
-	        <g:VerticalPanel height="50px" ui:field="info7" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards7" />
+	        <g:VerticalPanel ui:field="info7" />
 	      </g:HorizontalPanel>
 	    </g:at>
 	    
 	    <g:at left='30' top='150'>
 	      <g:HorizontalPanel height="100px" ui:field="seat8">
-	        <g:HorizontalPanel height="50px" ui:field="holeCards8" />
-	        <g:VerticalPanel height="50px" ui:field="info8" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards8" />
+	        <g:VerticalPanel ui:field="info8" />
 	      </g:HorizontalPanel>
 	    </g:at>
 	    
 	    <g:at left='60' top='30'>
 	      <g:VerticalPanel height="100px" ui:field="seat9">
-	        <g:HorizontalPanel height="50px" ui:field="holeCards9" />
-	        <g:VerticalPanel height="50px" ui:field="info9" />
+	        <g:HorizontalPanel height="75px" ui:field="holeCards9" />
+	        <g:VerticalPanel ui:field="info9" />
 	      </g:VerticalPanel>
 	    </g:at>
 	  
@@ -79,8 +79,11 @@
 	  
 	  <g:HorizontalPanel>
 	    <g:Button text="Fold" ui:field="btnFold"/>
-	    <g:Button text="Bet" ui:field="btnBet"/>
+      <g:Button text="Check" ui:field="btnCheck"/>
+      <g:Button text="Call" ui:field="btnCall"/>
+      <g:Button text="Bet" ui:field="btnBet"/>
 	    <g:TextBox ui:field="txtAmount"/>
+	    <g:Button text="All In" ui:field="btnAllIn"/>
 	  </g:HorizontalPanel>
   
   </g:VerticalPanel>

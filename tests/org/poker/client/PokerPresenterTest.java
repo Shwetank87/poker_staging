@@ -77,11 +77,12 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testBuyInForAnyPlayer() {
-    pokerPresenter.updateUI(createUpdateUI(3, p1_id, 0, emptyState, getStartingChips(0, 0, 0)));
+    Map<Integer, Integer> startingChips = getStartingChips(0,0,0);
+    pokerPresenter.updateUI(createUpdateUI(3, p1_id, 0, emptyState, startingChips));
     // P1 buys-in for 5000
     pokerPresenter.buyInDone(5000);
     verify(mockView).doBuyIn();
-    verify(mockContainer).sendMakeMove(pokerLogic.getInitialBuyInMove(p1_id, 5000));
+    verify(mockContainer).sendMakeMove(pokerLogic.getInitialBuyInMove(p1_id, 5000, startingChips));
   }
   
   @Test
@@ -109,8 +110,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         startingChips_4_player));
     // P0 folds
     pokerPresenter.moveMade(PokerMove.FOLD, 0);
-    verify(mockView).setPlayerState(4, 0, state.getCurrentRound(), state.getPlayerBets(), 
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 0, 0, state.getCurrentRound(), state.getPlayerBets(), 
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doFoldMove(state, playersIds_4_players));
   }
@@ -123,8 +125,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         startingChips_4_player));
     // P0 calls 500
     pokerPresenter.moveMade(PokerMove.CALL, 500);
-    verify(mockView).setPlayerState(4, 0, state.getCurrentRound(), state.getPlayerBets(), 
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 0, 0, state.getCurrentRound(), state.getPlayerBets(), 
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doCallMove(state, playersIds_4_players, 500));
   }
@@ -137,8 +140,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         startingChips_4_player));
     // P0 raises to 1000 total from 500
     pokerPresenter.moveMade(PokerMove.RAISE, 1000);
-    verify(mockView).setPlayerState(4, 0, state.getCurrentRound(), state.getPlayerBets(), 
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 0, 0, state.getCurrentRound(), state.getPlayerBets(), 
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doRaiseMove(state, playersIds_4_players, 1000));
   }
@@ -151,8 +155,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         startingChips_4_player));
     //P2 bets 500
     pokerPresenter.moveMade(PokerMove.BET, 500);
-    verify(mockView).setPlayerState(4, 2, state.getCurrentRound(), state.getPlayerBets(),
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 2, 2, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doBetMove(state, playersIds_4_players, 500));
   }
@@ -165,8 +170,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         startingChips_4_player));
     //P2 bets 500
     pokerPresenter.moveMade(PokerMove.CHECK, 0);
-    verify(mockView).setPlayerState(4, 2, state.getCurrentRound(), state.getPlayerBets(),
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 2, 2, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doCheckMove(state, playersIds_4_players));
   }
@@ -181,8 +187,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
     pokerPresenter.updateUI(createUpdateUI(4, p1_id, p0_id, flopFourPlayerDealerTurnState,
         startingChips_4_player));
     // P0 folds
-    verify(mockView).setPlayerState(4, 1, state.getCurrentRound(), state.getPlayerBets(), 
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 1, 0, state.getCurrentRound(), state.getPlayerBets(), 
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
   }
   
   @Test
@@ -192,8 +199,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
     pokerPresenter.updateUI(createUpdateUI(4, viewerId, p0_id, flopFourPlayerDealerTurnState,
         startingChips_4_player));
     // P0 folds
-    verify(mockView).setViewerState(4, state.getCurrentRound(), state.getPlayerBets(), 
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setViewerState(4, 0, state.getCurrentRound(), state.getPlayerBets(), 
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
   }
   
   @Test
@@ -204,8 +212,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         startingChips_4_player));
     // P0 goes all-in
     pokerPresenter.moveMade(PokerMove.RAISE, 1500); // P0 had 1500 chips remaining
-    verify(mockView).setPlayerState(4, 0, state.getCurrentRound(), state.getPlayerBets(), 
-        state.getPots(), state.getPlayerChips(), getHoleCards(4), getAbsentCards(5));
+    verify(mockView).setPlayerState(4, 0, 0, state.getCurrentRound(), state.getPlayerBets(), 
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(4), getAbsentCards(5));
     verify(mockView).makeYourMove();
     verify(mockContainer).sendMakeMove(pokerLogic.doRaiseMove(state, playersIds_4_players, 1500));
   }
@@ -217,8 +226,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
     PokerState state = pokerLogicHelper.gameApiStateToPokerState(apiState);
     pokerPresenter.updateUI(createUpdateUI(3, p0_id, p0_id, apiState, startingChips_3_player));
     // P0 marks P1 as winner
-    verify(mockView).setPlayerState(3, 0, state.getCurrentRound(), state.getPlayerBets(),
-        state.getPots(), state.getPlayerChips(), getHoleCards(3, state.getCards()), 
+    verify(mockView).setPlayerState(3, 0, 0, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(3, state.getCards()), 
         getOptionalCards(6, 11, state.getCards()));
     verify(mockContainer).sendMakeMove(pokerLogic.doEndGameMove(state, playersIds_3_players));
   }
@@ -229,9 +239,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
         showdownThreePlayerDealersTurnState, showdownThreePlayerDealersTurncardList);
     PokerState state = pokerLogicHelper.gameApiStateToPokerState(apiState);
     pokerPresenter.updateUI(createUpdateUI(3, p1_id, p0_id, apiState, startingChips_3_player));
-    verify(mockView).setPlayerState(3, 1, state.getCurrentRound(), state.getPlayerBets(),
-        state.getPots(), state.getPlayerChips(), getHoleCards(3, state.getCards()), 
-        getOptionalCards(6, 11, state.getCards()));
+    verify(mockView).setPlayerState(3, 1, 0, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(3, state.getCards()), getOptionalCards(6, 11, state.getCards()));
   }
   
   @Test
@@ -241,9 +251,9 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
     PokerState state = pokerLogicHelper.gameApiStateToPokerState(apiState);
     pokerPresenter.updateUI(createUpdateUI(3, viewerId, p0_id, apiState, startingChips_3_player));
     // P0 marks P1 as winner
-    verify(mockView).setViewerState(3, state.getCurrentRound(), state.getPlayerBets(),
-        state.getPots(), state.getPlayerChips(), getHoleCards(3, state.getCards()), 
-        getOptionalCards(6, 11, state.getCards()));
+    verify(mockView).setViewerState(3, 0, state.getCurrentRound(), state.getPlayerBets(),
+        state.getPots(), state.getPlayerChips(), state.getPlayersInHand(),
+        getHoleCards(3, state.getCards()), getOptionalCards(6, 11, state.getCards()));
   }
   
   
