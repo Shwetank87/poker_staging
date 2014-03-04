@@ -18,7 +18,7 @@ import com.google.gwt.user.client.ui.RootPanel;
 
 public class PokerEntryPoint implements EntryPoint {
 
-  private static final int NUMBER_OF_PLAYERS = 5;
+  private static final int NUMBER_OF_PLAYERS = 9;
   
   IteratingPlayerContainer container;
   PokerPresenter pokerPresenter;

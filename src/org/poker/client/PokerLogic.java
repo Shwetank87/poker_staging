@@ -619,7 +619,7 @@ public class PokerLogic extends AbstractPokerLogicBase {
     int raiseByAmount = existingPlayerBet + additionalAmount - totalRequiredBet; 
     check(additionalAmount <= playerChips,
         "Cannot raise more than existing chips.");
-    boolean isAllIn = ((existingPlayerBet + additionalAmount) == playerChips);
+    boolean isAllIn = (additionalAmount == playerChips);
     check(isAllIn || raiseByAmount >= totalRequiredBet,
         "Raise must be atleast twice existing bet.");
     

@@ -139,6 +139,8 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     for (CellPanel panel : infoPanelArr) {
       panel.setStyleName("playerInfoPanel");
     }
+    potInfoPanel.add(new Label("Waiting for all players to buy-in..."));
+    
   }
   
   private List<Image> createCardImages(List<Optional<Card>> cards) {
