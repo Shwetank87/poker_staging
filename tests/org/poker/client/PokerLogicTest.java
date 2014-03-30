@@ -1,15 +1,15 @@
 package org.poker.client;
 
+import org.game_api.GameApi.AttemptChangeTokens;
+import org.game_api.GameApi.EndGame;
+import org.game_api.GameApi.Operation;
+import org.game_api.GameApi.Set;
+import org.game_api.GameApi.SetTurn;
+import org.game_api.GameApi.SetVisibility;
+import org.game_api.GameApi.VerifyMove;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.poker.client.GameApi.AttemptChangeTokens;
-import org.poker.client.GameApi.EndGame;
-import org.poker.client.GameApi.Operation;
-import org.poker.client.GameApi.Set;
-import org.poker.client.GameApi.SetTurn;
-import org.poker.client.GameApi.SetVisibility;
-import org.poker.client.GameApi.VerifyMove;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -75,10 +75,10 @@ public class PokerLogicTest extends AbstractPokerLogicTestBase {
   private final ImmutableList<Operation> showdownThreePlayerDealerMakesP2Winner =
       ImmutableList.<Operation>of(
           new AttemptChangeTokens(
-              ImmutableMap.<Integer, Integer>of(p0_id, 1600, p1_id, 1600 , p2_id, 1600+ 4200),
-              ImmutableMap.<Integer, Integer>of(p0_id, 0, p1_id, 0, p2_id, 0)),
+              ImmutableMap.<String, Integer>of(p0_id, 1600, p1_id, 1600 , p2_id, 1600+ 4200),
+              ImmutableMap.<String, Integer>of(p0_id, 0, p1_id, 0, p2_id, 0)),
           new EndGame(
-              ImmutableMap.<Integer, Integer>of(
+              ImmutableMap.<String, Integer>of(
                   p0_id, 0,
                   p1_id, 0,
                   p2_id, 1)));

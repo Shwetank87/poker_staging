@@ -3,11 +3,12 @@ package org.poker.client;
 import java.util.List;
 import java.util.Map;
 
+import org.game_api.GameApi.Container;
+import org.game_api.GameApi.UpdateUI;
+
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 
-import org.poker.client.GameApi.Container;
-import org.poker.client.GameApi.UpdateUI;
 
 /**
  * Presenter for controlling the graphics for Poker 
@@ -83,8 +84,8 @@ public class PokerPresenter {
   // It's Optional because it can also be viewer
   private Optional<Player> myPlayer;
   private PokerState pokerState;
-  List<Integer> playerIdList;
-  private Map<Integer, Integer> playerIdToTokensInPot;
+  List<String> playerIdList;
+  private Map<String, Integer> playerIdToTokensInPot;
   
   public PokerPresenter(View view, Container container) {
     this.view = view;
@@ -96,7 +97,7 @@ public class PokerPresenter {
   public void updateUI(UpdateUI updateUI) {
     playerIdList = updateUI.getPlayerIds();
     int numOfPlayers = playerIdList.size();
-    int playerId = updateUI.getYourPlayerId();
+    String playerId = updateUI.getYourPlayerId();
     int playerIndex = updateUI.getPlayerIndex(playerId);
     myPlayer = (playerIndex >=0 && playerIndex < numOfPlayers) ?
         Optional.of(Player.values()[playerIndex]) : Optional.<Player>absent();
@@ -104,7 +105,7 @@ public class PokerPresenter {
     
     // Check if the playerIdToTokensInPot is empty
     if (playerIdToTokensInPot.isEmpty()){
-      for(int id : playerIdList) {
+      for(String id : playerIdList) {
         playerIdToTokensInPot.put(id, 0);
       }
     }
@@ -187,7 +188,7 @@ public class PokerPresenter {
    */
   private boolean canGameStart() {
     boolean canGameStart = true;
-    for(int playerId : playerIdList) {
+    for(String playerId : playerIdList) {
       if(playerIdToTokensInPot.get(playerId) == 0) {
         return false;
       }
@@ -244,7 +245,7 @@ public class PokerPresenter {
    * @param amount
    */
   public void buyInDone(int amount) {
-    int myPlayerId = playerIdList.get(myPlayer.get().ordinal());
+    String myPlayerId = playerIdList.get(myPlayer.get().ordinal());
     container.sendMakeMove(pokerLogic.getInitialBuyInMove(myPlayerId, amount, playerIdToTokensInPot));
   }
   
@@ -253,7 +254,7 @@ public class PokerPresenter {
    * 
    * @param playerIdList
    */
-  private void sendInitialMove(List<Integer> playerIdList) {
+  private void sendInitialMove(List<String> playerIdList) {
     container.sendMakeMove(pokerLogic.getInitialMove(playerIdList, playerIdToTokensInPot));
   }
   

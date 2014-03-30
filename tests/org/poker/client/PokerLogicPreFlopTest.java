@@ -2,14 +2,14 @@ package org.poker.client;
 
 import java.util.List;
 
+import org.game_api.GameApi.Operation;
+import org.game_api.GameApi.Set;
+import org.game_api.GameApi.SetTurn;
+import org.game_api.GameApi.SetVisibility;
+import org.game_api.GameApi.VerifyMove;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.poker.client.GameApi.Operation;
-import org.poker.client.GameApi.Set;
-import org.poker.client.GameApi.SetTurn;
-import org.poker.client.GameApi.SetVisibility;
-import org.poker.client.GameApi.VerifyMove;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

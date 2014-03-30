@@ -6,13 +6,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.game_api.GameApi;
+import org.game_api.GameApi.Operation;
+import org.game_api.GameApi.Set;
+import org.game_api.GameApi.SetVisibility;
+import org.game_api.GameApi.VerifyMove;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.poker.client.GameApi.Operation;
-import org.poker.client.GameApi.Set;
-import org.poker.client.GameApi.SetVisibility;
-import org.poker.client.GameApi.VerifyMove;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,8 +21,8 @@ import com.google.common.collect.ImmutableMap;
 @RunWith(JUnit4.class)
 public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
-  private List<Operation> getInitialOperations(List<Integer> playerIds,
-      Map<Integer, Integer> startingChips) {
+  private List<Operation> getInitialOperations(List<String> playerIds,
+      Map<String, Integer> startingChips) {
     return pokerLogic.getInitialMove(playerIds, startingChips);
   }
   
@@ -31,7 +32,7 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   @Test
   public void testInitialBuyInByPlayers() {
     
-    Map<Integer, Integer> startingChips;
+    Map<String, Integer> startingChips;
     
     // Buy-in by P0
     startingChips = getStartingChips(2000, 0, 0, 0);
@@ -62,8 +63,8 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   @Test
   public void testInitialOperationSize() {
     List<Operation> initialOperation = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id),
-        ImmutableMap.<Integer, Integer>of(p0_id, 1000, p1_id, 2000, p2_id, 1000));
+        ImmutableList.<String>of(p0_id, p1_id, p2_id),
+        ImmutableMap.<String, Integer>of(p0_id, 1000, p1_id, 2000, p2_id, 1000));
     // 1 SetTurn operation 
     // 10 Set operations
     // 1 Shuffle operation
@@ -74,9 +75,9 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testInitialMoveWithTwoPlayers() {
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000);
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id), startingChips);
     VerifyMove verifyMove = move(p0_id, emptyState, initialOperations, playersInfo_2_players,
         startingChips);
     assertMoveOk(verifyMove);
@@ -84,9 +85,9 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testInitialMoveWithFourPlayers() {
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id), startingChips);
     VerifyMove verifyMove = move(p0_id, emptyState, initialOperations, playersInfo_4_players,
         startingChips);
     assertMoveOk(verifyMove);
@@ -94,9 +95,9 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testInitialMoveByWrongPlayer() {
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id), startingChips);
     VerifyMove verifyMove = move(p1_id, emptyState, initialOperations, playersInfo_4_players,
         startingChips);
     assertHacker(verifyMove);
@@ -104,9 +105,9 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testInitialMoveFromNonEmptyState() {
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id), startingChips);
     VerifyMove verifyMove = move(p0_id, nonEmptyState, initialOperations, playersInfo_4_players,
         startingChips);
     assertHacker(verifyMove);
@@ -114,9 +115,9 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testInitialMoveWithExtraOperation() {
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id), startingChips);
     initialOperations.add(new Set(BOARD, ImmutableList.of()));
     VerifyMove verifyMove = move(p0_id, emptyState, initialOperations, playersInfo_4_players,
         startingChips);
@@ -125,9 +126,9 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testInitialMoveWithNoShuffleOperation() {
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id), startingChips);
     //remove the shuffle operation
     for (Iterator<Operation> it = initialOperations.iterator(); it.hasNext();) {
       if (it.next() instanceof GameApi.Shuffle) {
@@ -142,10 +143,10 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
   @Test
   public void testInitialMoveWithWrongVisibility() {
     int numOfPlayers = 4;
-    Map<Integer, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
+    Map<String, Integer> startingChips = getStartingChips(2000, 2000, 2000, 2000);
     
     List<Operation> initialOperations = getInitialOperations(
-        ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id), startingChips);
+        ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id), startingChips);
     
     //remove the setVisibility operations
     for (Iterator<Operation> it = initialOperations.iterator(); it.hasNext();) {
@@ -163,7 +164,7 @@ public class PokerLogicInitialMoveTest extends AbstractPokerLogicTestBase {
     }
     // Make remaining cards not visible to anyone
     for (int i = 2 * numOfPlayers; i < 52; i++) {
-      initialOperations.add(new SetVisibility(C + i, ImmutableList.<Integer>of()));
+      initialOperations.add(new SetVisibility(C + i, ImmutableList.<String>of()));
     }
     
     VerifyMove verifyMove = move(p0_id, emptyState, initialOperations, playersInfo_4_players,

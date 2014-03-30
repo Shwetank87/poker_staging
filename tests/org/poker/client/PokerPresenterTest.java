@@ -6,6 +6,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import java.util.List;
 import java.util.Map;
 
+import org.game_api.GameApi;
+import org.game_api.GameApi.Container;
+import org.game_api.GameApi.Operation;
+import org.game_api.GameApi.SetTurn;
+import org.game_api.GameApi.UpdateUI;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,10 +19,6 @@ import org.junit.runners.JUnit4;
 import org.mockito.Mockito;
 import org.poker.client.Card.Rank;
 import org.poker.client.Card.Suit;
-import org.poker.client.GameApi.Container;
-import org.poker.client.GameApi.Operation;
-import org.poker.client.GameApi.SetTurn;
-import org.poker.client.GameApi.UpdateUI;
 import org.poker.client.PokerPresenter.View;
 
 import com.google.common.base.Optional;
@@ -55,7 +56,7 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
   private View mockView;
   private Container mockContainer;
   
-  private final int viewerId = GameApi.VIEWER_ID;
+  private final String viewerId = GameApi.VIEWER_ID;
     
   @Before
   public void runBefore() {
@@ -77,8 +78,8 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testBuyInForAnyPlayer() {
-    Map<Integer, Integer> startingChips = getStartingChips(0,0,0);
-    pokerPresenter.updateUI(createUpdateUI(3, p1_id, 0, emptyState, startingChips));
+    Map<String, Integer> startingChips = getStartingChips(0,0,0);
+    pokerPresenter.updateUI(createUpdateUI(3, p1_id, "0", emptyState, startingChips));
     // P1 buys-in for 5000
     pokerPresenter.buyInDone(5000);
     verify(mockView).doBuyIn();
@@ -87,19 +88,19 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
   
   @Test
   public void testEmptyStateForDealer() {
-    pokerPresenter.updateUI(createUpdateUI(4, p0_id, 0, emptyState, startingChips_4_player));
+    pokerPresenter.updateUI(createUpdateUI(4, p0_id, "0", emptyState, startingChips_4_player));
     verify(mockContainer).sendMakeMove(pokerLogic.getInitialMove(
         playersIds_4_players, startingChips_4_player));
   }
   
   @Test
   public void testEmptyStateForNonDealerPlayer() {
-    pokerPresenter.updateUI(createUpdateUI(4, p2_id, 0, emptyState, startingChips_4_player));
+    pokerPresenter.updateUI(createUpdateUI(4, p2_id, "0", emptyState, startingChips_4_player));
   }
   
   @Test
   public void testEmptyStateForViewer() {
-    pokerPresenter.updateUI(createUpdateUI(4, viewerId, 0, emptyState, startingChips_4_player));
+    pokerPresenter.updateUI(createUpdateUI(4, viewerId, "0", emptyState, startingChips_4_player));
   }
   
   @Test
@@ -303,15 +304,15 @@ public class PokerPresenterTest extends AbstractPokerLogicTestBase {
     return retCards;
   }
   
-  private UpdateUI createUpdateUI(int numOfPlayers, int yourPlayerId,
-      int turnOfPlayerId, Map<String, Object> state,
-      Map<Integer, Integer> playerIdToTokensInPot) {
+  private UpdateUI createUpdateUI(int numOfPlayers, String yourPlayerId,
+      String turnOfPlayerId, Map<String, Object> state,
+      Map<String, Integer> playerIdToTokensInPot) {
     return new UpdateUI(yourPlayerId,
         getPlayersInfo(numOfPlayers),
         state,
         emptyState, //presenter doesn't care about last state
         ImmutableList.<Operation>of(new SetTurn(turnOfPlayerId)),
-        0, //presenter doesn't care about last player ID
+        "0", //presenter doesn't care about last player ID
         playerIdToTokensInPot);
   }
   

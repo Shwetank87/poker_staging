@@ -137,7 +137,7 @@ public class PokerLogicHelper extends AbstractPokerLogicBase {
    * @param playerIds
    * @return
    */
-  List<List<Integer>> getWinners(PokerState lastState, List<Integer> playerIds) {
+  List<List<String>> getWinners(PokerState lastState, List<String> playerIds) {
     
     List<Player> playersInHand = lastState.getPlayersInHand();
     List<PokerHand> bestHands = Lists.newArrayList();
@@ -161,11 +161,11 @@ public class PokerLogicHelper extends AbstractPokerLogicBase {
     }
     // For each pot, find list of players that had the best hand
     // Add this list to the return list
-    List<List<Integer>> winners = Lists.newArrayList();
+    List<List<String>> winners = Lists.newArrayList();
     List<Pot> pots = lastState.getPots();
     for(Pot pot : pots) {
       List<Player> playersInPot = pot.getPlayersInPot();
-      List<Integer> potWinners = Lists.newArrayList();
+      List<String> potWinners = Lists.newArrayList();
       PokerHand bestHandInPot = null;
       for(Player player : playersInPot) {
         PokerHand currentHand = bestHands.get(player.ordinal());

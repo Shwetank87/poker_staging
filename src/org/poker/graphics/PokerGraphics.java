@@ -37,6 +37,7 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
   
   private static final boolean AUTO_BUY_IN = false;
   private static final int AUTO_BUY_IN_VALUE = 10000;
+  private static final int MAX_PLAYERS = 9;
   
   @UiField
   AbsolutePanel pokerTable;
@@ -126,6 +127,8 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
   private int myCurrentBet;
   private int myChips;
   
+  private PopupEnterValue buyInPopup = null;
+  
   public PokerGraphics() {
     CardImages cardImages = GWT.create(CardImages.class);
     this.cardImageSupplier = new CardImageSupplier(cardImages);
@@ -183,18 +186,36 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
   @Override
   public void doBuyIn() {
     disableButtons();
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+      holeCardPanelArr[i].clear();
+      infoPanelArr[i].clear();
+    }
+    communityCards.clear();
+    potInfoPanel.clear();
+    potInfoPanel.add(new Label("Waiting for all players to buy-in..."));
+    
     
     if (AUTO_BUY_IN) {
       presenter.buyInDone(AUTO_BUY_IN_VALUE);
       return;
     }
     
-    new PopupEnterValue("Enter buy-in amount", new PopupEnterValue.ValueEntered() {
-      @Override
-      public void setValue(int value) {
-        presenter.buyInDone(value);
-      }
-    }).center();
+    if (buyInPopup == null) {
+      buyInPopup = new PopupEnterValue("Enter buy-in amount", new PopupEnterValue.ValueEntered() {
+        @Override
+        public void setValue(int value) {
+          presenter.buyInDone(value);
+          buyInPopup = null;
+        }
+      });
+      buyInPopup.center();
+    }
+  }
+  
+  private void hideBuyInPopup() {
+    if (buyInPopup != null) {
+      buyInPopup.hide();
+    }
   }
 
   @Override
@@ -249,6 +270,7 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     currentBet = 0;
     myChips = playerChips.get(myIndex);
     myCurrentBet = playerBets.get(myIndex);
+    hideBuyInPopup();
     
     for (int i = 0; i < numOfPlayers; i++) {
       placeCards(holeCardPanelArr[i], createCardImages(holeCards.get(i)));
@@ -288,6 +310,7 @@ public class PokerGraphics extends Composite implements PokerPresenter.View {
     currentBet = 0;
     myChips = 0;
     myCurrentBet = 0;
+    hideBuyInPopup();
     
     for (int i = 0; i < numOfPlayers; i++) {
       placeCards(holeCardPanelArr[i], createCardImages(holeCards.get(i)));

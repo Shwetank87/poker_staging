@@ -5,9 +5,9 @@ import static org.junit.Assert.assertEquals;
 import java.util.List;
 import java.util.Map;
 
-import org.poker.client.GameApi.Operation;
-import org.poker.client.GameApi.VerifyMove;
-import org.poker.client.GameApi.VerifyMoveDone;
+import org.game_api.GameApi.Operation;
+import org.game_api.GameApi.VerifyMove;
+import org.game_api.GameApi.VerifyMoveDone;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -37,12 +37,12 @@ public abstract class AbstractPokerLogicTestBase {
   protected static final String CURRENT_POT_BET = "currentPotBet";
   protected static final String PLAYERS_IN_POT = "playersInPot";
  
-  protected final int p0_id = 84;
-  protected final int p1_id = 85;
-  protected final int p2_id = 86;
-  protected final int p3_id = 87;
+  protected final String p0_id = "84";
+  protected final String p1_id = "85";
+  protected final String p2_id = "86";
+  protected final String p3_id = "87";
   
-  protected final int[] playerIdArr = {p0_id, p1_id, p2_id, p3_id};
+  protected final String[] playerIdArr = {p0_id, p1_id, p2_id, p3_id};
   
   protected final ImmutableMap<String, Object> p0_info =
       ImmutableMap.<String, Object>of(PLAYER_ID, p0_id);
@@ -60,21 +60,21 @@ public abstract class AbstractPokerLogicTestBase {
   protected final ImmutableList<Map<String, Object>> playersInfo_4_players =
       ImmutableList.<Map<String, Object>>of(p0_info, p1_info, p2_info, p3_info);
   
-  protected final ImmutableList<Integer> playersIds_2_players =
-      ImmutableList.<Integer>of(p0_id, p1_id);
-  protected final ImmutableList<Integer> playersIds_3_players =
-      ImmutableList.<Integer>of(p0_id, p1_id, p2_id);
-  protected final ImmutableList<Integer> playersIds_4_players =
-      ImmutableList.<Integer>of(p0_id, p1_id, p2_id, p3_id);
+  protected final ImmutableList<String> playersIds_2_players =
+      ImmutableList.<String>of(p0_id, p1_id);
+  protected final ImmutableList<String> playersIds_3_players =
+      ImmutableList.<String>of(p0_id, p1_id, p2_id);
+  protected final ImmutableList<String> playersIds_4_players =
+      ImmutableList.<String>of(p0_id, p1_id, p2_id, p3_id);
   
 
   // dummy starting chips as they don't matter after initial move since
   // chips information is already in the state.
-  protected final ImmutableMap<Integer, Integer> startingChips_2_player =
+  protected final ImmutableMap<String, Integer> startingChips_2_player =
       getStartingChips(5000, 5000);
-  protected final ImmutableMap<Integer, Integer> startingChips_3_player =
+  protected final ImmutableMap<String, Integer> startingChips_3_player =
       getStartingChips(5000, 5000, 5000);
-  protected final ImmutableMap<Integer, Integer> startingChips_4_player =
+  protected final ImmutableMap<String, Integer> startingChips_4_player =
       getStartingChips(5000, 5000, 5000, 5000);
   
   
@@ -290,17 +290,17 @@ public abstract class AbstractPokerLogicTestBase {
     }
   }
   
-  protected VerifyMove move(int lastMovePlayerId, Map<String, Object> lastState,
+  protected VerifyMove move(String lastMovePlayerId, Map<String, Object> lastState,
       List<Operation> lastMove, List<Map<String, Object>> playersInfo,
-      Map<Integer, Integer> playerIdToNumberOfTokensInPot) {
+      Map<String, Integer> playerIdToNumberOfTokensInPot) {
     return new VerifyMove(playersInfo,
         emptyState, // we never need to check the resulting state
         lastState, lastMove, lastMovePlayerId,
         playerIdToNumberOfTokensInPot);
   }
   
-  protected ImmutableMap<Integer, Integer> getStartingChips(int... chips) {
-    ImmutableMap.Builder<Integer, Integer> builder = ImmutableMap.builder();
+  protected ImmutableMap<String, Integer> getStartingChips(int... chips) {
+    ImmutableMap.Builder<String, Integer> builder = ImmutableMap.builder();
     for (int i = 0; i < chips.length; i++) {
       builder.put(playerIdArr[i], chips[i]);
     }
